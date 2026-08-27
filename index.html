@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>EnderTiendita :v | Ender Rivera Art & Merch</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Fredoka & Plus Jakarta Sans for friendly indie artist vibe -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- React & Babel CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Tailwind Custom Config: Vibrant Gamer/Anime Palette -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            display: ['Fredoka', 'cursive'],
+          },
+          colors: {
+            ender: {
+              bg: '#0f0e17',
+              card: '#1a1926',
+              border: '#2a283d',
+              accent: '#ff2a6d',
+              purple: '#9d4edf',
+              cyan: '#05d9e8',
+              yellow: '#ffb703',
+              text: '#f0f0f5',
+              subtext: '#a0a0b8'
+            }
+          },
+          boxShadow: {
+            'glow-pink': '0 0 20px -3px rgba(255, 42, 109, 0.4)',
+            'glow-purple': '0 0 20px -3px rgba(157, 78, 223, 0.4)',
+            'glow-cyan': '0 0 20px -3px rgba(5, 217, 232, 0.4)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #0f0e17;
+      color: #f0f0f5;
+      overflow-x: hidden;
+    }
+    h1, h2, h3, h4, .font-display {
+      font-family: 'Fredoka', cursive;
+    }
+    .badge-pop {
+      background: linear-gradient(135deg, #ff2a6d 0%, #9d4edf 100%);
+    }
+    .btn-yape {
+      background: linear-gradient(135deg, #7b1fa2 0%, #00b0ff 100%);
+    }
+    .glass-card {
+      background: rgba(26, 25, 38, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-header {
+      background: rgba(15, 14, 23, 0.9);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="selection:bg-ender-accent selection:text-white">
+  
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    const WHATSAPP_NUMBER = "51922279138"; // Reemplazar con el número oficial
+    const INSTAGRAM_TIENDA = "https://www.instagram.com/enderloco_store/";
+    const INSTAGRAM_PRINCIPAL = "https://www.instagram.com/ender_drawner/";
+    const FACEBOOK_URL = "https://www.facebook.com/ender.rivera.332";
+
+    // Products based on EnderTiendita Instagram catalog
+    const PRODUCTS = [
+      {
+        id: 1,
+        name: "★ Comisiones de Dibujo Digital (Open Commissions)",
+        category: "Comisiones",
+        price: 35.00,
+        originalPrice: 45.00,
+        rating: 5.0,
+        reviewsCount: 88,
+        badge: "★ OPEN COMMISSION ★",
+        image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=700&auto=format&fit=crop&q=80",
+        description: "¡Comisiones abiertas! Dibujo de tu avatar, OC o personaje de anime favorito. Elige entre Bust-up, Half-body o Full-body. Incluye entrega digital en alta resolución HD.",
+        optionsLabel: "Tipo de Comisión",
+        sizes: ["Icon/Headshot (S/. 25)", "Half Body (S/. 35)", "Full Body (S/. 50)"],
+        colors: ["Estilo Chibi", "Estilo Anime Full Render"],
+        stock: 5
+      },
+      {
+        id: 2,
+        name: "Llavero Acrílico Undertale Merch",
+        category: "Standees & Llaveros",
+        price: 8.00,
+        originalPrice: 10.00,
+        rating: 4.9,
+        reviewsCount: 34,
+        badge: "BESTSELLER",
+        image: "https://images.unsplash.com/photo-1563089145-599997674d42?w=700&auto=format&fit=crop&q=80",
+        description: "Llavero acrílico transparente de alta resistencia doble vista con broche metálico. Diseños exclusivos de Undertale / Deltarune ilustrados por Ender.",
+        optionsLabel: "Personaje",
+        sizes: ["Sans", "Papyrus", "Frisk", "Spamton", "Ralsei"],
+        colors: ["Acrílico 6cm"],
+        stock: 20
+      },
+      {
+        id: 3,
+        name: "Llaveros Peluche Undertale / Deltarune",
+        category: "Peluches",
+        price: 15.00,
+        originalPrice: 18.00,
+        rating: 5.0,
+        reviewsCount: 45,
+        badge: "POPULAR",
+        image: "https://images.unsplash.com/photo-1558679908-541bcf1249ff?w=700&auto=format&fit=crop&q=80",
+        description: "Llaveros mini peluche coleccionables super suaves al tacto. Ideal para mochila o llaves.",
+        optionsLabel: "Modelo",
+        sizes: ["Spamton", "Ralsei", "Toriel"],
+        colors: ["Edición Soft"],
+        stock: 12
+      },
+      {
+        id: 4,
+        name: "Standee Acrílico Helluva Boss & Hazbin Hotel",
+        category: "Standees & Llaveros",
+        price: 15.00,
+        originalPrice: 20.00,
+        rating: 4.9,
+        reviewsCount: 29,
+        badge: "DESTACADO",
+        image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=700&auto=format&fit=crop&q=80",
+        description: "Figura o standee acrílico de escritorio con base encajable. Ilustración detallada de Blitz, Stolas, Angel Dust o Alastor.",
+        optionsLabel: "Tamaño / Modelo",
+        sizes: ["Standee Mediano 12cm (S/. 15)", "Standee Grande 15cm (S/. 22)"],
+        colors: ["Helluva Boss", "Hazbin Hotel"],
+        stock: 10
+      },
+      {
+        id: 5,
+        name: "Prints de Arte Ilustrado (A4 y A3)",
+        category: "Prints",
+        price: 8.00,
+        originalPrice: 12.00,
+        rating: 5.0,
+        reviewsCount: 62,
+        badge: "FANART PRINT",
+        image: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=700&auto=format&fit=crop&q=80",
+        description: "Láminas de impresión de alta calidad en papel ilustración brillante. Disponibles en tamaño A4 y A3 de tus series y fanarts favoritos.",
+        optionsLabel: "Tamaño de Print",
+        sizes: ["Print A4 (S/. 8.00)", "Print A3 (S/. 15.00)"],
+        colors: ["Goldship Umamusume", "Glitch Murder Drones", "Chupa las Bolas Meme", "FNAF Chica"],
+        stock: 30
+      },
+      {
+        id: 6,
+        name: "Pines Acrílicos & Metálicos Anime",
+        category: "Pines & Stickers",
+        price: 6.00,
+        originalPrice: 8.00,
+        rating: 4.8,
+        reviewsCount: 50,
+        badge: "OFERTA",
+        image: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=700&auto=format&fit=crop&q=80",
+        description: "Pines coleccionables para vestir tu casaca, gorra o mochila. Pines de acrílico y metal reforzado.",
+        optionsLabel: "Material / Estilo",
+        sizes: ["Pin Acrílico (S/. 6.00)", "Pin Metálico (S/. 3.50)"],
+        colors: ["Corazones Almas Undertale", "Pines Chibi Anime"],
+        stock: 40
+      },
+      {
+        id: 7,
+        name: "Pack Almas Undertale (Pines x 7)",
+        category: "Pines & Stickers",
+        price: 25.00,
+        originalPrice: 30.00,
+        rating: 5.0,
+        reviewsCount: 38,
+        badge: "PACK ESPECIAL",
+        image: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=700&auto=format&fit=crop&q=80",
+        description: "Set completo de 7 pines de las almas humanas de Undertale (Determinación, Paciencia, Valentía, Integridad, Perseverancia, Amabilidad y Justicia).",
+        optionsLabel: "Set",
+        sizes: ["Pack Completo 7 Pines"],
+        colors: ["Multicolor Neon"],
+        stock: 15
+      },
+      {
+        id: 8,
+        name: "Glitch Merch: Stickers Impermeables (Set x 6)",
+        category: "Pines & Stickers",
+        price: 6.00,
+        originalPrice: 8.00,
+        rating: 4.9,
+        reviewsCount: 74,
+        badge: "STICKERS",
+        image: "https://images.unsplash.com/photo-1572375992501-4b0892d50c69?w=700&auto=format&fit=crop&q=80",
+        description: "Set de calcomanías troqueladas laminadas mate. Resistentes al agua, ideales para laptops, cuadernos y termos.",
+        optionsLabel: "Temática",
+        sizes: ["Murder Drones Set", "Random Meme Set", "FNAF Set"],
+        colors: ["Laminado Mate"],
+        stock: 50
+      }
+    ];
+
+    function App() {
+      const [selectedCategory, setSelectedCategory] = useState("Todos");
+      const [searchQuery, setSearchQuery] = useState("");
+      const [cart, setCart] = useState([]);
+      const [isCartOpen, setIsCartOpen] = useState(false);
+      const [selectedProduct, setSelectedProduct] = useState(null);
+      const [productOption, setProductOption] = useState("");
+      const [productColor, setProductColor] = useState("");
+      const [productQty, setProductQty] = useState(1);
+      
+      const [isWpOpen, setIsWpOpen] = useState(false);
+      const [wpMsg, setWpMsg] = useState("");
+      const [isMobileNav, setIsMobileNav] = useState(false);
+      const [toast, setToast] = useState(null);
+
+      // Trigger Toast notification
+      const notify = (msg) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 2500);
+      };
+
+      // Filter catalog
+      const filteredProducts = useMemo(() => {
+        return PRODUCTS.filter(p => {
+          const matchCat = selectedCategory === "Todos" || p.category === selectedCategory;
+          const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                              p.description.toLowerCase().includes(searchQuery.toLowerCase());
+          return matchCat && matchSearch;
+        });
+      }, [selectedCategory, searchQuery]);
+
+      // Add to Shopping Cart
+      const addToCart = (product, option = null, color = null, qty = 1) => {
+        const itemOpt = option || product.sizes[0];
+        const itemColor = color || (product.colors ? product.colors[0] : "Estándar");
+        const key = `${product.id}-${itemOpt}-${itemColor}`;
+
+        setCart(prev => {
+          const idx = prev.findIndex(item => item.key === key);
+          if (idx > -1) {
+            const copy = [...prev];
+            copy[idx].quantity += qty;
+            return copy;
+          }
+          return [...prev, {
+            key,
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            option: itemOpt,
+            color: itemColor,
+            quantity: qty
+          }];
+        });
+        notify(`¡Añadido! ${product.name}`);
+      };
+
+      // Total calculations in Soles S/.
+      const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+      const openModal = (p) => {
+        setSelectedProduct(p);
+        setProductOption(p.sizes[0]);
+        setProductColor(p.colors ? p.colors[0] : "Estándar");
+        setProductQty(1);
+      };
+
+      // WhatsApp Order Text formatting (Peruvian Soles)
+      const getWpOrderUrl = () => {
+        if (cart.length === 0) return "#";
+        let text = `*¡Hola EnderTiendita!* 🎨✨\nQuiero realizar el siguiente pedido de tu catálogo web:\n\n`;
+        cart.forEach((i, idx) => {
+          text += `${idx + 1}. *${i.name}*\n   • Opción/Modelo: ${i.option}\n   • Estilo: ${i.color}\n   • Cantidad: ${i.quantity}\n   • Subtotal: S/. ${(i.price * i.quantity).toFixed(2)}\n\n`;
+        });
+        text += `💰 *TOTAL A PAGAR:* S/. ${subtotal.toFixed(2)}\n\n`;
+        text += `📌 *Deseo coordinar pago por Yape / Plin o entrega en Feria / Envío Shalom/Olva.* ¡Espero tu confirmación!`;
+        return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+      };
+
+      // Direct WhatsApp text for single product
+      const getDirectItemWpUrl = (p, opt, color, qty) => {
+        const total = (p.price * qty).toFixed(2);
+        const text = `*¡Hola EnderTiendita!* 👋🎨\nMe interesa pedir este artículo de tu catálogo:\n\n📌 *${p.name}*\n• Modelo/Opción: ${opt}\n• Estilo: ${color}\n• Cantidad: ${qty}\n• Total: S/. ${total}\n\n¿Tienes disponibilidad inmediata para Yape/Plin o entregar en próxima feria?`;
+        return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+      };
+
+      const sendCustomWp = (customMsg = null) => {
+        const textToSend = customMsg || wpMsg;
+        if (!textToSend.trim()) return;
+        const fullText = `*Consulta desde EnderTiendita Web:* ${textToSend}`;
+        window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(fullText)}`, '_blank');
+        setWpMsg("");
+      };
+
+      return (
+        <div className="min-h-screen flex flex-col pb-20 md:pb-0 relative bg-ender-bg text-gray-100 selection:bg-ender-accent">
+          
+          {/* Notification Toast */}
+          {toast && (
+            <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-ender-card border border-ender-accent text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-2xl shadow-glow-pink flex items-center gap-2 animate-bounce">
+              <span className="w-2.5 h-2.5 rounded-full bg-ender-accent animate-ping"></span>
+              <span>{toast}</span>
+            </div>
+          )}
+
+          {/* Top Announcement Bar: Upcoming Fair & Status */}
+          <div className="bg-gradient-to-r from-purple-900 via-ender-accent to-ender-purple text-white text-[11px] sm:text-xs py-1.5 px-3 text-center font-bold flex items-center justify-center gap-2 shadow-md">
+            <span className="bg-black/50 text-ender-yellow font-extrabold px-2 py-0.5 rounded text-[10px] uppercase tracking-wider flex items-center gap-1">
+              <i className="fa-solid fa-star text-amber-300"></i> OPEN COMMISSIONS
+            </span>
+            <span className="truncate">PRÓXIMA FERIA: HIPÓDROMO MONTERRICO - CARRERA DE UMAMUSUME</span>
+          </div>
+
+          {/* Header Bar */}
+          <header className="sticky top-0 z-40 glass-header border-b border-ender-border">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-3">
+              
+              {/* Brand Logo & Name */}
+              <div 
+                onClick={() => { setSelectedCategory("Todos"); setSearchQuery(""); }} 
+                className="flex items-center gap-2.5 cursor-pointer select-none"
+              >
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-ender-accent via-ender-purple to-ender-cyan p-0.5 shadow-glow-pink">
+                  <div className="w-full h-full bg-ender-bg rounded-[14px] flex items-center justify-center text-ender-accent font-display font-extrabold text-xl sm:text-2xl">
+                    E:v
+                  </div>
+                </div>
+                <div>
+                  <h1 className="text-lg sm:text-2xl font-display font-bold text-white tracking-wide flex items-center gap-1.5">
+                    EnderTiendita <span className="text-[11px] font-sans px-2 py-0.5 rounded-full bg-ender-accent/20 text-ender-accent border border-ender-accent/40 font-bold">:v</span>
+                  </h1>
+                  <p className="text-[10px] text-ender-subtext font-semibold uppercase tracking-wider hidden sm:block">Ilustración • Anime • Merch & Comisiones</p>
+                </div>
+              </div>
+
+              {/* Navigation Categories Desktop */}
+              <nav className="hidden md:flex items-center gap-5 text-xs font-bold uppercase tracking-wider text-ender-subtext">
+                {["Todos", "Comisiones", "Standees & Llaveros", "Prints", "Pines & Stickers", "Peluches"].map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`transition duration-200 hover:text-white py-1 border-b-2 ${
+                      selectedCategory === cat ? "border-ender-accent text-white" : "border-transparent text-gray-400"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </nav>
+
+              {/* Header Action Buttons */}
+              <div className="flex items-center gap-2 sm:gap-3">
+                
+                {/* Social Instagram Link */}
+                <a
+                  href={INSTAGRAM_TIENDA}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-500/10 hover:bg-pink-500/20 text-pink-400 border border-pink-500/30 text-xs font-bold transition"
+                  title="Instagram de Tienda"
+                >
+                  <i className="fa-brands fa-instagram text-sm"></i>
+                  <span>@enderloco_store</span>
+                </a>
+
+                {/* Desktop Search Input */}
+                <div className="relative hidden lg:block w-44">
+                  <input
+                    type="text"
+                    placeholder="Buscar art / merch..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-ender-card text-xs text-white placeholder-gray-500 rounded-xl px-3 py-2 pl-8 border border-ender-border focus:outline-none focus:border-ender-accent"
+                  />
+                  <i className="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-gray-500 text-xs"></i>
+                </div>
+
+                {/* Cart Button */}
+                <button
+                  onClick={() => setIsCartOpen(true)}
+                  className="relative p-2.5 sm:p-3 rounded-xl bg-ender-card border border-ender-border hover:border-ender-accent text-white transition shadow-lg"
+                  aria-label="Carrito"
+                >
+                  <i className="fa-solid fa-basket-shopping text-base sm:text-lg text-ender-cyan"></i>
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-ender-accent text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-ender-bg shadow-glow-pink">
+                      {cartCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Mobile Menu Toggle */}
+                <button
+                  onClick={() => setIsMobileNav(!isMobileNav)}
+                  className="md:hidden p-2.5 rounded-xl bg-ender-card border border-ender-border text-gray-300"
+                >
+                  <i className={`fa-solid ${isMobileNav ? 'fa-xmark' : 'fa-bars'} text-base`}></i>
+                </button>
+              </div>
+            </div>
+
+            {/* Mobile Navigation Drawer */}
+            {isMobileNav && (
+              <div className="md:hidden bg-ender-bg border-b border-ender-border p-4 space-y-3">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Buscar en el catálogo..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-ender-card text-xs text-white placeholder-gray-500 rounded-xl px-3 py-2.5 pl-9 border border-ender-border focus:outline-none focus:border-ender-accent"
+                  />
+                  <i className="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-500 text-xs"></i>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  {["Todos", "Comisiones", "Standees & Llaveros", "Prints", "Pines & Stickers", "Peluches"].map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => { setSelectedCategory(cat); setIsMobileNav(false); }}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold text-left transition ${
+                        selectedCategory === cat ? 'bg-ender-accent text-white' : 'bg-ender-card text-gray-300 border border-ender-border'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="pt-2 border-t border-ender-border flex justify-between items-center text-xs">
+                  <a
+                    href={INSTAGRAM_TIENDA}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-pink-400 font-bold flex items-center gap-1.5"
+                  >
+                    <i className="fa-brands fa-instagram"></i> @enderloco_store
+                  </a>
+                  <a
+                    href={FACEBOOK_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 font-bold flex items-center gap-1.5"
+                  >
+                    <i className="fa-brands fa-facebook"></i> Facebook
+                  </a>
+                </div>
+              </div>
+            )}
+          </header>
+
+          {/* Hero Section: Artist Banner */}
+          {}
+          <section className="relative overflow-hidden py-8 sm:py-12 bg-gradient-to-b from-ender-bg via-purple-950/20 to-ender-bg border-b border-ender-border">
+            <div className="absolute top-0 right-1/4 w-80 h-80 bg-ender-accent/10 rounded-full filter blur-3xl pointer-events-none"></div>
+            <div className="absolute bottom-0 left-1/4 w-80 h-80 bg-ender-purple/10 rounded-full filter blur-3xl pointer-events-none"></div>
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                
+                {/* Hero Bio Text */}
+                <div className="lg:col-span-7 space-y-3.5 text-center lg:text-left">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-ender-purple/20 border border-ender-purple/40 text-ender-cyan text-xs font-bold uppercase tracking-wider">
+                    <i className="fa-solid fa-palette"></i> Ilustraciones & Fanart Indie
+                  </div>
+
+                  <h2 className="text-3xl sm:text-5xl font-display font-extrabold text-white leading-tight">
+                    ENDER RIVERA <br/>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-ender-accent via-ender-purple to-ender-cyan">
+                      ART & MERCH TIENDITA :v
+                    </span>
+                  </h2>
+
+                  <p className="text-ender-subtext text-xs sm:text-sm max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
+                    ¡Bienvenidos a la tienda oficial! Encuentra prints A4/A3, standees acrílicos, llaveros peluche, pines y comisiones de dibujo de Undertale, Helluva Boss, Murder Drones, FNAF y más.
+                  </p>
+
+                  <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2.5 pt-2">
+                    <a
+                      href="#catalogo"
+                      className="px-5 py-3 rounded-xl badge-pop text-white font-bold text-xs uppercase tracking-wider shadow-glow-pink transition"
+                    >
+                      Explorar Merch <i className="fa-solid fa-arrow-down-long ml-1"></i>
+                    </a>
+
+                    <button
+                      onClick={() => setIsWpOpen(true)}
+                      className="px-5 py-3 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-400 border border-emerald-500/40 font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition"
+                    >
+                      <i className="fa-brands fa-whatsapp text-base"></i>
+                      <span>Pedir por WhatsApp / Yape</span>
+                    </button>
+                  </div>
+
+                  {/* Payment badging info */}
+                  <div className="pt-2 flex flex-wrap justify-center lg:justify-start items-center gap-2 text-[11px] text-ender-subtext">
+                    <span className="flex items-center gap-1 font-bold text-emerald-400"><i className="fa-solid fa-check-circle"></i> Aceptamos Yape / Plin</span>
+                    <span>•</span>
+                    <span className="flex items-center gap-1 font-bold text-cyan-400"><i className="fa-solid fa-truck-fast"></i> Envíos a todo el Perú</span>
+                    <span>•</span>
+                    <span className="flex items-center gap-1 font-bold text-purple-400"><i className="fa-solid fa-store"></i> Entregas en Ferias</span>
+                  </div>
+                </div>
+
+                {/* Hero Visual Banner Card */}
+                <div className="lg:col-span-5 flex justify-center">
+                  <div className="w-full max-w-sm glass-card p-4 rounded-3xl border border-ender-border shadow-2xl relative overflow-hidden group">
+                    <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-ender-card">
+                      <img 
+                        src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=700&auto=format&fit=crop&q=80" 
+                        alt="Ender Rivera Commission Promo"
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                      />
+                      <div className="absolute top-3 left-3 bg-ender-accent text-white text-[10px] font-extrabold px-2.5 py-1 rounded-lg uppercase shadow">
+                        ★ OPEN COMMISSIONS ★
+                      </div>
+                      <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-ender-bg via-ender-bg/90 to-transparent">
+                        <p className="text-[10px] text-ender-cyan font-bold uppercase">Encargos Personalizados</p>
+                        <h3 className="text-sm font-bold text-white">Comisiones de Dibujo Digital</h3>
+                        <div className="flex justify-between items-center mt-1">
+                          <span className="text-base font-extrabold text-ender-yellow">Desde S/. 25.00</span>
+                          <button
+                            onClick={() => openModal(PRODUCTS[0])}
+                            className="px-3 py-1 rounded-lg badge-pop text-white text-[11px] font-bold"
+                          >
+                            Ver Tarifas
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </section>
+
+          {/* Main Products Catalog */}
+          {}
+          <main id="catalogo" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-1">
+            
+            {/* Header section & Mobile Filter Pills */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 border-b border-ender-border pb-4">
+              <div>
+                <span className="text-ender-accent font-bold text-[11px] uppercase tracking-wider block mb-0.5">
+                  <i className="fa-solid fa-sparkles text-xs mr-1 text-ender-yellow"></i> Catálogo de Merch
+                </span>
+                <h3 className="text-2xl sm:text-3xl font-display font-bold text-white">
+                  Productos Disponible & Fanart
+                </h3>
+              </div>
+
+              {/* Mobile Horizontal Pill Filters */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+                {["Todos", "Comisiones", "Standees & Llaveros", "Prints", "Pines & Stickers", "Peluches"].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                      selectedCategory === cat
+                        ? "bg-ender-accent text-white shadow-glow-pink"
+                        : "bg-ender-card text-ender-subtext border border-ender-border hover:border-gray-600"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Empty state fallback */}
+            {filteredProducts.length === 0 && (
+              <div className="glass-card rounded-3xl p-8 text-center max-w-sm mx-auto my-8 border border-ender-border">
+                <i className="fa-solid fa-ghost text-4xl text-ender-subtext mb-3"></i>
+                <h4 className="text-base font-bold text-white mb-1">Sin resultados</h4>
+                <p className="text-xs text-ender-subtext mb-4">Intenta cambiando el filtro o la búsqueda.</p>
+                <button
+                  onClick={() => { setSelectedCategory("Todos"); setSearchQuery(""); }}
+                  className="px-4 py-2 rounded-xl badge-pop text-white text-xs font-bold uppercase"
+                >
+                  Ver Todo
+                </button>
+              </div>
+            )}
+
+            {/* Products Grid: 2 columns on mobile for fast scanning */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+              {filteredProducts.map((product) => (
+                <div
+                  key={product.id}
+                  className="glass-card rounded-2xl border border-ender-border overflow-hidden flex flex-col justify-between hover:border-ender-accent/60 transition duration-300 group"
+                >
+                  {/* Image Container */}
+                  <div 
+                    onClick={() => openModal(product)}
+                    className="relative aspect-square bg-ender-card overflow-hidden cursor-pointer"
+                  >
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                      loading="lazy"
+                    />
+                    
+                    {product.badge && (
+                      <span className="absolute top-2 left-2 bg-ender-bg/90 text-ender-cyan border border-ender-cyan/30 text-[9px] sm:text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wide">
+                        {product.badge}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Card Info */}
+                  <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] text-ender-subtext mb-1">
+                        <span className="text-ender-purple font-bold uppercase">{product.category}</span>
+                        <span className="text-amber-400 font-bold"><i className="fa-solid fa-star text-[9px]"></i> {product.rating}</span>
+                      </div>
+
+                      <h4 
+                        onClick={() => openModal(product)}
+                        className="font-bold text-white text-xs sm:text-sm leading-snug line-clamp-2 hover:text-ender-accent cursor-pointer transition mb-2"
+                      >
+                        {product.name}
+                      </h4>
+                    </div>
+
+                    <div>
+                      <div className="flex items-baseline gap-1.5 my-2">
+                        <span className="text-base sm:text-lg font-extrabold text-ender-yellow">S/. {product.price.toFixed(2)}</span>
+                        {product.originalPrice && (
+                          <span className="text-[10px] text-gray-500 line-through">S/. {product.originalPrice.toFixed(2)}</span>
+                        )}
+                      </div>
+
+                      {/* Touch Action Buttons */}
+                      <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-ender-border">
+                        <button
+                          onClick={() => addToCart(product)}
+                          className="py-2 rounded-xl bg-ender-card hover:bg-ender-accent hover:text-white text-gray-300 border border-ender-border text-[11px] font-bold transition flex items-center justify-center gap-1"
+                        >
+                          <i className="fa-solid fa-cart-plus"></i>
+                          <span>Añadir</span>
+                        </button>
+                        
+                        <a
+                          href={getDirectItemWpUrl(product, product.sizes[0], product.colors ? product.colors[0] : 'Estándar', 1)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="py-2 rounded-xl bg-emerald-950/60 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 text-[11px] font-bold transition flex items-center justify-center gap-1"
+                        >
+                          <i className="fa-brands fa-whatsapp text-xs"></i>
+                          <span>Yapear</span>
+                        </a>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              ))}
+            </div>
+          </main>
+
+          {/* Artist Links Banner */}
+          {}
+          <section className="bg-ender-card border-y border-ender-border py-8 sm:py-12 my-6">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="glass-card rounded-3xl p-6 sm:p-8 border border-pink-500/30 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
+                
+                <div className="space-y-2 text-center md:text-left">
+                  <span className="px-3 py-1 rounded-full bg-pink-500/20 text-pink-400 border border-pink-500/30 text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5">
+                    <i className="fa-brands fa-instagram"></i> Cuentas Oficiales
+                  </span>
+                  <h3 className="text-xl sm:text-3xl font-display font-bold text-white">
+                    Sigue a Ender Rivera en Instagram & Facebook
+                  </h3>
+                  <p className="text-ender-subtext text-xs sm:text-sm max-w-xl">
+                    Mira nuevos dibujos, avances de comisiones, anuncios de estands en ferias y concursos.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-2.5">
+                  <a
+                    href={INSTAGRAM_TIENDA}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg transition"
+                  >
+                    <i className="fa-brands fa-instagram text-base"></i>
+                    <span>@enderloco_store</span>
+                  </a>
+
+                  <a
+                    href={INSTAGRAM_PRINCIPAL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2.5 rounded-xl bg-ender-bg hover:bg-black text-ender-cyan border border-ender-cyan/40 font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition"
+                  >
+                    <i className="fa-solid fa-paint-brush"></i>
+                    <span>@ender_drawner</span>
+                  </a>
+                </div>
+
+              </div>
+            </div>
+          </section>
+
+          {/* Footer */}
+          {}
+          <footer className="bg-ender-bg border-t border-ender-border text-ender-subtext py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-xs mb-6">
+              
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl badge-pop flex items-center justify-center text-white font-display font-bold text-sm">E:v</div>
+                  <span className="font-bold text-white text-sm">EnderTiendita :v</span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  Tienda oficial de productos físicos e ilustraciones digitales de Ender Rivera. Atendido con amor por el artista.
+                </p>
+              </div>
+
+              <div>
+                <h5 className="text-white font-bold text-xs mb-2 uppercase tracking-wider">Categorías</h5>
+                <ul className="space-y-1.5 text-[11px]">
+                  <li><a href="#catalogo" className="hover:text-white">★ Open Commissions</a></li>
+                  <li><a href="#catalogo" className="hover:text-white">Standees & Llaveros Acrílicos</a></li>
+                  <li><a href="#catalogo" className="hover:text-white">Prints A4 / A3</a></li>
+                  <li><a href="#catalogo" className="hover:text-white">Pines & Stickers</a></li>
+                </ul>
+              </div>
+
+              <div>
+                <h5 className="text-white font-bold text-xs mb-2 uppercase tracking-wider">Contacto & Redes</h5>
+                <ul className="space-y-1.5 text-[11px]">
+                  <li><button onClick={() => setIsWpOpen(true)} className="hover:text-emerald-400 flex items-center gap-1"><i className="fa-brands fa-whatsapp text-emerald-400"></i> Pedidos por WhatsApp</button></li>
+                  <li><a href={INSTAGRAM_TIENDA} target="_blank" rel="noopener noreferrer" className="hover:text-pink-400 flex items-center gap-1"><i className="fa-brands fa-instagram text-pink-400"></i> Instagram Tiendita</a></li>
+                  <li><a href={FACEBOOK_URL} target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 flex items-center gap-1"><i className="fa-brands fa-facebook text-blue-400"></i> Facebook Oficial</a></li>
+                </ul>
+              </div>
+
+              <div>
+                <h5 className="text-white font-bold text-xs mb-2 uppercase tracking-wider">Formas de Pago</h5>
+                <p className="text-[11px] mb-2">Aceptamos transferencias locales y entregas:</p>
+                <div className="flex flex-wrap gap-1.5 text-xs">
+                  <span className="px-2.5 py-1 rounded-lg bg-purple-950 text-purple-300 border border-purple-700/50 font-bold text-[10px]">YAPE</span>
+                  <span className="px-2.5 py-1 rounded-lg bg-cyan-950 text-cyan-300 border border-cyan-700/50 font-bold text-[10px]">PLIN</span>
+                  <span className="px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700/50 font-bold text-[10px]">ENTREGA EN FERIAS</span>
+                </div>
+              </div>
+
+            </div>
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 border-t border-ender-border text-center sm:flex sm:justify-between text-[11px] text-gray-500">
+              <p>© 2026 EnderTiendita :v • Ender Rivera Art. Todos los derechos reservados.</p>
+              <p className="mt-1 sm:mt-0">Perú • Envíos a todo el país</p>
+            </div>
+          </footer>
+
+          {/* Shopping Cart Drawer */}
+          {}
+          {isCartOpen && (
+            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm animate-fadeIn">
+              <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
+                <div className="w-screen max-w-md bg-ender-bg border-l border-ender-border flex flex-col justify-between shadow-2xl">
+                  
+                  {/* Cart Header */}
+                  <div className="p-4 border-b border-ender-border flex items-center justify-between bg-ender-card">
+                    <div className="flex items-center gap-2">
+                      <i className="fa-solid fa-basket-shopping text-ender-accent text-lg"></i>
+                      <h3 className="text-base font-bold text-white uppercase tracking-wider">Tu Carrito ({cartCount})</h3>
+                    </div>
+                    <button
+                      onClick={() => setIsCartOpen(false)}
+                      className="w-8 h-8 rounded-lg bg-ender-bg text-gray-400 hover:text-white flex items-center justify-center border border-ender-border"
+                    >
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+
+                  {/* Cart Item List */}
+                  <div className="p-4 flex-1 overflow-y-auto space-y-3">
+                    {cart.length === 0 ? (
+                      <div className="text-center py-12 text-ender-subtext space-y-2">
+                        <i className="fa-solid fa-ghost text-4xl text-gray-700"></i>
+                        <p className="text-sm font-bold text-gray-300">El carrito está vacío :v</p>
+                        <p className="text-xs">¡Añade algún print, llavero o comisión!</p>
+                      </div>
+                    ) : (
+                      cart.map((item) => (
+                        <div key={item.key} className="bg-ender-card p-3 rounded-2xl border border-ender-border flex gap-3 items-center">
+                          <img src={item.image} alt={item.name} className="w-14 h-14 rounded-xl object-cover bg-ender-bg" />
+                          <div className="flex-1 min-w-0">
+                            <h5 className="text-xs font-bold text-white truncate">{item.name}</h5>
+                            <p className="text-[10px] text-ender-subtext">Opción: <span className="text-ender-cyan font-bold">{item.option}</span></p>
+                            <p className="text-xs font-extrabold text-ender-yellow mt-1">S/. {(item.price * item.quantity).toFixed(2)}</p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1.5">
+                            <button
+                              onClick={() => setCart(cart.filter(i => i.key !== item.key))}
+                              className="text-gray-500 hover:text-ender-accent text-xs"
+                            >
+                              <i className="fa-solid fa-trash-can"></i>
+                            </button>
+                            <div className="flex items-center bg-ender-bg rounded-lg border border-ender-border px-1.5 py-0.5 text-xs">
+                              <button
+                                onClick={() => {
+                                  if (item.quantity > 1) {
+                                    setCart(cart.map(i => i.key === item.key ? {...i, quantity: i.quantity - 1} : i));
+                                  } else {
+                                    setCart(cart.filter(i => i.key !== item.key));
+                                  }
+                                }}
+                                className="text-gray-400 hover:text-white px-1 font-bold"
+                              >-</button>
+                              <span className="px-1.5 font-bold text-white text-xs">{item.quantity}</span>
+                              <button
+                                onClick={() => setCart(cart.map(i => i.key === item.key ? {...i, quantity: i.quantity + 1} : i))}
+                                className="text-gray-400 hover:text-white px-1 font-bold"
+                              >+</button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Cart Footer */}
+                  {cart.length > 0 && (
+                    <div className="p-4 border-t border-ender-border bg-ender-card space-y-3">
+                      <div className="flex justify-between text-sm text-white font-extrabold">
+                        <span>Total a pagar:</span>
+                        <span className="text-ender-yellow">S/. {subtotal.toFixed(2)}</span>
+                      </div>
+
+                      <a
+                        href={getWpOrderUrl()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition"
+                      >
+                        <i className="fa-brands fa-whatsapp text-lg"></i>
+                        <span>Pedir por WhatsApp / Yape</span>
+                      </a>
+                    </div>
+                  )}
+
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Detail Modal for Selected Product */}
+          {}
+          {selectedProduct && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+              <div className="bg-ender-card w-full max-w-2xl rounded-3xl border border-ender-border overflow-hidden shadow-2xl relative max-h-[90vh] flex flex-col md:flex-row">
+                
+                <button
+                  onClick={() => setSelectedProduct(null)}
+                  className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-ender-bg text-gray-400 hover:text-white flex items-center justify-center border border-ender-border"
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+
+                {/* Modal Product Image */}
+                <div className="md:w-1/2 bg-ender-bg p-4 flex items-center justify-center">
+                  <img
+                    src={selectedProduct.image}
+                    alt={selectedProduct.name}
+                    className="w-full h-56 md:h-80 object-cover rounded-2xl"
+                  />
+                </div>
+
+                {/* Modal Details */}
+                <div className="md:w-1/2 p-4 sm:p-5 flex flex-col justify-between overflow-y-auto space-y-3">
+                  <div>
+                    <span className="text-[10px] font-bold text-ender-purple uppercase tracking-wider">{selectedProduct.category}</span>
+                    <h3 className="text-base sm:text-lg font-bold text-white leading-tight mt-0.5">{selectedProduct.name}</h3>
+                    
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xl font-extrabold text-ender-yellow">S/. {selectedProduct.price.toFixed(2)}</span>
+                      {selectedProduct.originalPrice && (
+                        <span className="text-xs text-gray-500 line-through">S/. {selectedProduct.originalPrice.toFixed(2)}</span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-ender-subtext mt-2 leading-relaxed">
+                      {selectedProduct.description}
+                    </p>
+
+                    {/* Options / Sizes Selector */}
+                    {selectedProduct.sizes && (
+                      <div className="mt-3">
+                        <label className="block text-[10px] font-bold text-gray-300 uppercase mb-1.5">{selectedProduct.optionsLabel || 'Opciones'}:</label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedProduct.sizes.map((sz) => (
+                            <button
+                              key={sz}
+                              onClick={() => setProductOption(sz)}
+                              className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition ${
+                                productOption === sz
+                                  ? "bg-ender-accent text-white border-ender-accent shadow-glow-pink"
+                                  : "bg-ender-bg text-ender-subtext border-ender-border"
+                              }`}
+                            >
+                              {sz}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Style / Color Selector */}
+                    {selectedProduct.colors && (
+                      <div className="mt-3">
+                        <label className="block text-[10px] font-bold text-gray-300 uppercase mb-1.5">Estilo / Personaje:</label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedProduct.colors.map((c) => (
+                            <button
+                              key={c}
+                              onClick={() => setProductColor(c)}
+                              className={`px-2.5 py-1 rounded-xl text-xs font-semibold border transition ${
+                                productColor === c
+                                  ? "bg-ender-purple text-white border-ender-purple"
+                                  : "bg-ender-bg text-ender-subtext border-ender-border"
+                              }`}
+                            >
+                              {c}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Quantity */}
+                    <div className="mt-3 flex items-center gap-2">
+                      <label className="text-[10px] font-bold text-gray-300 uppercase">Cantidad:</label>
+                      <div className="flex items-center bg-ender-bg rounded-xl border border-ender-border px-2 py-0.5">
+                        <button onClick={() => setProductQty(Math.max(1, productQty - 1))} className="text-gray-400 px-1 font-bold">-</button>
+                        <span className="px-2 text-xs font-bold text-white">{productQty}</span>
+                        <button onClick={() => setProductQty(productQty + 1)} className="text-gray-400 px-1 font-bold">+</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-3 border-t border-ender-border">
+                    <button
+                      onClick={() => {
+                        addToCart(selectedProduct, productOption, productColor, productQty);
+                        setSelectedProduct(null);
+                      }}
+                      className="w-full py-2.5 rounded-xl bg-ender-bg hover:bg-ender-accent hover:text-white text-ender-accent border border-ender-accent/50 font-bold text-xs uppercase tracking-wider transition"
+                    >
+                      Añadir al Carrito
+                    </button>
+
+                    <a
+                      href={getDirectItemWpUrl(selectedProduct, productOption, productColor, productQty)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-2 transition"
+                    >
+                      <i className="fa-brands fa-whatsapp text-base"></i>
+                      <span>Pedir por WhatsApp / Yape</span>
+                    </a>
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* Floating WhatsApp Widget */}
+          {}
+          <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end">
+            
+            {/* Popover */}
+            {isWpOpen && (
+              <div className="mb-3 w-72 sm:w-80 bg-ender-card rounded-3xl border border-emerald-500/40 shadow-2xl overflow-hidden animate-fadeIn">
+                <div className="bg-emerald-950 p-3 text-white flex items-center justify-between border-b border-emerald-500/20">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full badge-pop flex items-center justify-center font-bold text-white text-xs">
+                      E:v
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs leading-tight">EnderTiendita :v</h4>
+                      <p className="text-[10px] text-emerald-300">Consultas & Yape directo</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setIsWpOpen(false)} className="text-emerald-300 hover:text-white">
+                    <i className="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+
+                <div className="p-3 bg-ender-b  g space-y-2 text-xs">
+                  <div className="bg-ender-card p-2.5 rounded-2xl border border-ender-border text-gray-200 text-[11px] leading-relaxed">
+                    👋 ¡Hola! ¿Quieres encargar una comisión, preguntar stock de prints/standees o coordinar pago por Yape?
+                  </div>
+
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => sendCustomWp("Hola Ender! Quisiera consultar precios y cupos para una comisión de dibujo.")}
+                      className="w-full text-left p-1.5 rounded-xl bg-ender-card hover:bg-emerald-950/40 text-emerald-400 border border-emerald-900/40 text-[11px]"
+                    >
+                      🎨 Consultar Comisiones
+                    </button>
+                    <button
+                      onClick={() => sendCustomWp("Hola! Quisiera saber el costo de envío a mi provincia o si entregas en la próxima feria.")}
+                      className="w-full text-left p-1.5 rounded-xl bg-ender-card hover:bg-emerald-950/40 text-emerald-400 border border-emerald-900/40 text-[11px]"
+                    >
+                      📦 Envíos y Entrega en Feria
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-2 bg-ender-card border-t border-ender-border flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    placeholder="Escribe tu mensaje..."
+                    value={wpMsg}
+                    onChange={(e) => setWpMsg(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && sendCustomWp()}
+                    className="flex-1 bg-ender-bg text-xs text-white placeholder-gray-500 rounded-xl px-3 py-1.5 border border-ender-border focus:outline-none focus:border-emerald-500"
+                  />
+                  <button
+                    onClick={() => sendCustomWp()}
+                    className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xs"
+                  >
+                    <i className="fa-solid fa-paper-plane"></i>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Trigger Button */}
+            <button
+              onClick={() => setIsWpOpen(!isWpOpen)}
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center shadow-2xl border border-white/20 transition transform hover:scale-105"
+              aria-label="WhatsApp Chat"
+            >
+              <i className="fa-brands fa-whatsapp text-2xl sm:text-3xl"></i>
+            </button>
+          </div>
+
+          {/* Mobile Dock Navigation Bar */}
+          <div className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-ender-bg/95 backdrop-blur-lg border-t border-ender-border px-4 py-2 flex items-center justify-around text-xs">
+            <button
+              onClick={() => { setSelectedCategory("Todos"); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="flex flex-col items-center gap-0.5 text-gray-400 hover:text-white"
+            >
+              <i className="fa-solid fa-house text-sm"></i>
+              <span className="text-[10px]">Inicio</span>
+            </button>
+
+            <a
+              href="#catalogo"
+              className="flex flex-col items-center gap-0.5 text-gray-400 hover:text-white"
+            >
+              <i className="fa-solid fa-layer-group text-sm"></i>
+              <span className="text-[10px]">Catálogo</span>
+            </a>
+
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="flex flex-col items-center gap-0.5 text-ender-accent relative"
+            >
+              <i className="fa-solid fa-basket-shopping text-sm"></i>
+              <span className="text-[10px]">Carrito</span>
+              {cartCount > 0 && (
+                <span className="absolute -top-1 right-2 bg-ender-accent text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setIsWpOpen(true)}
+              className="flex flex-col items-center gap-0.5 text-emerald-400"
+            >
+              <i className="fa-brands fa-whatsapp text-sm"></i>
+              <span className="text-[10px]">WhatsApp</span>
+            </button>
+          </div>
+
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
