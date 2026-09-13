@@ -21,34 +21,26 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- Firebase Cloud Integration (Modular SDK) -->
+ 
+ <!-- Firebase Cloud Integration -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'ender-tiendita-store';
-    let db = null;
-    let auth = null;
+    const firebaseConfig = {
+      apiKey: "AIzaSyDl55xUQFsCzVoydnLw4Ne9ZRIn81CEBFM",
+      authDomain: "end-matsuri.firebaseapp.com",
+      projectId: "end-matsuri",
+      storageBucket: "end-matsuri.firebasestorage.app",
+      messagingSenderId: "486586058691",
+      appId: "1:486586058691:web:cf3b3010bc5b67a4965f76",
+      measurementId: "G-QBHNPZ8Z8C"
+    };
 
-    try {
-      if (typeof __firebase_config !== 'undefined') {
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-        const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        if (token) {
-          await signInWithCustomToken(auth, token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      }
-    } catch (err) {
-      console.warn("Firebase auto-init:", err);
-    }
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-    window.__enderFirebase = { db, auth, appId, doc, setDoc, onSnapshot };
+    window.__enderFirebase = { db, doc, setDoc, onSnapshot };
     window.dispatchEvent(new CustomEvent('ender-firebase-ready'));
   </script>
 
@@ -313,7 +305,7 @@
 
           try {
             // Strict Path Rule: /artifacts/{appId}/public/data/{collectionName}/{documentId}
-            const stockDocRef = fb.doc(fb.db, 'artifacts', fb.appId, 'public', 'data', 'inventory', 'stock_counts');
+            const stockDocRef = fb.doc(fb.db, 'inventory', 'stock_counts');
             
             const unsubscribe = fb.onSnapshot(stockDocRef, (snapshot) => {
               if (snapshot.exists()) {
@@ -448,7 +440,7 @@
         const fb = window.__enderFirebase;
         if (fb && fb.db) {
           try {
-            const stockDocRef = fb.doc(fb.db, 'artifacts', fb.appId, 'public', 'data', 'inventory', 'stock_counts');
+            const stockDocRef = fb.doc(fb.db, 'inventory', 'stock_counts');
             await fb.setDoc(stockDocRef, {
               items: tempStocks,
               updatedAt: new Date().toISOString()
