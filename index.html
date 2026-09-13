@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0f0e17">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>EnderTiendita :v | Ender Rivera Art & Merch</title>
@@ -11,7 +10,7 @@
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Google Fonts: Fredoka & Plus Jakarta Sans for friendly indie artist vibe -->
+  <!-- Google Fonts: Fredoka & Plus Jakarta Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -24,14 +23,12 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- Firebase Cloud Integration (Modular SDK) -->
+  <!-- Firebase Cloud Integration -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // Configuración directa de tu proyecto Firebase: end-matsuri
-    const customFirebaseConfig = {
+    const firebaseConfig = {
       apiKey: "AIzaSyDl55xUQFsCzVoydnLw4Ne9ZRIn81CEBFM",
       authDomain: "end-matsuri.firebaseapp.com",
       projectId: "end-matsuri",
@@ -41,39 +38,14 @@
       measurementId: "G-QBHNPZ8Z8C"
     };
 
-    const firebaseConfig = typeof __firebase_config !== 'undefined'
-      ? JSON.parse(__firebase_config)
-      : customFirebaseConfig;
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'end-matsuri';
-    let db = null;
-    let auth = null;
-
-    async function initFirebase() {
-      try {
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-
-        // Autenticación anónima para habilitar lectura y escritura en la nube
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-        console.log("Firebase 'end-matsuri' conectado exitosamente.");
-      } catch (err) {
-        console.warn("Aviso en la conexión de Firebase:", err);
-      }
-
-      window.__enderFirebase = { db, auth, appId, doc, setDoc, onSnapshot };
-      window.dispatchEvent(new CustomEvent('ender-firebase-ready'));
-    }
-
-    initFirebase();
+    window.__enderFirebase = { db, doc, setDoc, onSnapshot };
+    window.dispatchEvent(new CustomEvent('ender-firebase-ready'));
   </script>
 
-  <!-- Tailwind Custom Config: Vibrant Gamer/Anime Palette -->
+  <!-- Tailwind Custom Config -->
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -110,12 +82,14 @@
     * {
       -webkit-tap-highlight-color: transparent;
     }
-    body {
+    html, body {
       font-family: 'Plus Jakarta Sans', sans-serif;
       background-color: #0f0e17;
       color: #f0f0f5;
+      /* Previene el desbordamiento horizontal global */
       overflow-x: hidden;
-      overscroll-behavior-y: none; /* Evita el rebote al scrollear, dando sensación de App nativa */
+      overscroll-behavior-y: none; /* Sensación de App Nativa sin rebotes */
+      width: 100%;
     }
     h1, h2, h3, h4, .font-display {
       font-family: 'Fredoka', cursive;
@@ -137,6 +111,7 @@
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
     }
+    /* Ocultar barra de scroll para carruseles */
     .no-scrollbar::-webkit-scrollbar {
       display: none;
     }
@@ -144,16 +119,13 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
-    /* Soporte para el notch y barra de inicio en iOS/Android */
+    /* iPhone Safe Area adjustments */
     .pb-safe {
-      padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
-    }
-    .mb-safe {
-      margin-bottom: calc(1rem + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom, 20px);
     }
   </style>
 </head>
-<body class="selection:bg-ender-accent selection:text-white">
+<body class="selection:bg-ender-accent selection:text-white relative">
   
   <div id="root"></div>
 
@@ -165,10 +137,8 @@
     const INSTAGRAM_PRINCIPAL = "https://www.instagram.com/ender_drawner/";
     const FACEBOOK_URL = "https://www.facebook.com/ender.rivera.332";
 
-    // Fallback image in case of broken link
     const FALLBACK_IMG = "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=700&auto=format&fit=crop&q=80";
 
-    // Products based on EnderTiendita Instagram catalog
     const PRODUCTS = [
       {
         id: 1,
@@ -315,7 +285,7 @@
       const [isMobileNav, setIsMobileNav] = useState(false);
       const [toast, setToast] = useState(null);
 
-      // Stock & Inventory State
+      // Inventory states
       const initialStockMap = useMemo(() => {
         const map = {};
         PRODUCTS.forEach(p => { map[p.id] = p.stock; });
@@ -329,7 +299,6 @@
       const [isSavingStock, setIsSavingStock] = useState(false);
       const [tempStocks, setTempStocks] = useState(initialStockMap);
 
-      // Trigger Toast notification
       const notify = (msg) => {
         setToast(msg);
         setTimeout(() => setToast(null), 2500);
@@ -341,15 +310,18 @@
           if (!fb || !fb.db) return;
 
           try {
-            // Strict Path Rule: /artifacts/{appId}/public/data/{collectionName}/{documentId}
-            const stockDocRef = fb.doc(fb.db, 'artifacts', fb.appId, 'public', 'data', 'inventory', 'stock_counts');
+            const stockDocRef = fb.doc(fb.db, 'inventory', 'stock_counts');
             
             const unsubscribe = fb.onSnapshot(stockDocRef, (snapshot) => {
               if (snapshot.exists()) {
                 const data = snapshot.data();
                 if (data && data.items) {
                   setStocks(prev => ({ ...prev, ...data.items }));
-                  setTempStocks(prev => ({ ...prev, ...data.items }));
+                  // Update tempStocks only if admin is NOT currently editing to prevent overwriting their edits
+                  setTempStocks(prev => {
+                      if(isAdminAuth) return prev; 
+                      return { ...prev, ...data.items };
+                  });
                 }
               }
             }, (error) => {
@@ -370,7 +342,7 @@
         return () => {
           if (unsub && typeof unsub === 'function') unsub();
         };
-      }, []);
+      }, [isAdminAuth]);
 
       const filteredProducts = useMemo(() => {
         return PRODUCTS.filter(p => {
@@ -381,7 +353,6 @@
         });
       }, [selectedCategory, searchQuery]);
 
-      // Add to Shopping Cart with Stock Validation
       const addToCart = (product, option = null, color = null, qty = 1) => {
         const currentStock = stocks[product.id] ?? product.stock;
         if (currentStock <= 0) {
@@ -419,7 +390,6 @@
         notify(`¡Añadido! ${product.name}`);
       };
 
-      // Total calculations in Soles S/.
       const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -430,7 +400,6 @@
         setProductQty(1);
       };
 
-      // WhatsApp Order Text formatting (Peruvian Soles)
       const getWpOrderUrl = () => {
         if (cart.length === 0) return "#";
         let text = `*¡Hola EnderTiendita!* 🎨✨\nQuiero realizar el siguiente pedido de tu catálogo web:\n\n`;
@@ -442,7 +411,6 @@
         return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
       };
 
-      // Direct WhatsApp text for single product
       const getDirectItemWpUrl = (p, opt, color, qty) => {
         const total = (p.price * qty).toFixed(2);
         const text = `*¡Hola EnderTiendita!* 👋🎨\nMe interesa pedir este artículo de tu catálogo:\n\n📌 *${p.name}*\n• Modelo/Opción: ${opt}\n• Estilo: ${color}\n• Cantidad: ${qty}\n• Total: S/. ${total}\n\n¿Tienes disponibilidad inmediata para Yape/Plin o entregar en próxima feria?`;
@@ -459,8 +427,8 @@
 
       const handleAdminLogin = (e) => {
         e.preventDefault();
-        // PIN de acceso seguro (demo: 1234)
-        if (adminPass === "1234" || adminPass.toLowerCase() === "ender") {
+        // Claves maestras
+        if (adminPass === "1506" || adminPass === "1506" || adminPass.toLowerCase() === "ender") {
           setIsAdminAuth(true);
           setTempStocks({ ...stocks });
           setAdminPass("");
@@ -477,8 +445,7 @@
         const fb = window.__enderFirebase;
         if (fb && fb.db) {
           try {
-            // Guardando en la colección persistente en tiempo real de Firebase
-            const stockDocRef = fb.doc(fb.db, 'artifacts', fb.appId, 'public', 'data', 'inventory', 'stock_counts');
+            const stockDocRef = fb.doc(fb.db, 'inventory', 'stock_counts');
             await fb.setDoc(stockDocRef, {
               items: tempStocks,
               updatedAt: new Date().toISOString()
@@ -486,7 +453,7 @@
             notify("✅ ¡Inventario guardado en la Nube!");
           } catch (err) {
             console.error("Error al guardar stock:", err);
-            notify("⚠️ Guardado localmente (sin conexión total a Firebase)");
+            notify("⚠️ Guardado localmente (sin conexión a Firebase)");
           }
         } else {
           notify("✅ Stock actualizado en la sesión actual");
@@ -514,7 +481,7 @@
       };
 
       return (
-        <div className="min-h-[100dvh] flex flex-col pb-24 md:pb-0 relative bg-ender-bg text-gray-100 selection:bg-ender-accent w-full overflow-x-hidden">
+        <div className="min-h-screen flex flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0 relative bg-ender-bg text-gray-100 w-full overflow-hidden">
           
           {/* Notification Toast */}
           {toast && (
@@ -524,7 +491,7 @@
             </div>
           )}
 
-          {/* Top Announcement Bar: Upcoming Fair & Status */}
+          {/* Top Announcement Bar */}
           <div className="bg-gradient-to-r from-purple-900 via-ender-accent to-ender-purple text-white text-[11px] sm:text-xs py-1.5 px-3 text-center font-bold flex items-center justify-center gap-2 shadow-md">
             <span className="bg-black/50 text-ender-yellow font-extrabold px-2 py-0.5 rounded text-[10px] uppercase tracking-wider flex items-center gap-1">
               <i className="fa-solid fa-star text-amber-300"></i> OPEN COMMISSIONS
@@ -533,7 +500,7 @@
           </div>
 
           {/* Header Bar */}
-          <header className="sticky top-0 z-40 glass-header border-b border-ender-border">
+          <header className="sticky top-0 z-40 glass-header border-b border-ender-border w-full">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-3">
               
               {/* Brand Logo & Name */}
@@ -587,7 +554,7 @@
                   href={INSTAGRAM_TIENDA}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-500/10 hover:bg-pink-500/20 text-pink-400 border border-pink-500/30 text-xs font-bold transition"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-500/10 hover:bg-pink-500/20 text-pink-400 border border-pink-500/30 text-xs font-bold transition active:scale-95"
                   title="Instagram de Tienda"
                 >
                   <i className="fa-brands fa-instagram text-sm"></i>
@@ -632,7 +599,7 @@
 
             {/* Mobile Navigation Drawer */}
             {isMobileNav && (
-              <div className="md:hidden bg-ender-bg border-b border-ender-border p-4 space-y-3">
+              <div className="md:hidden bg-ender-bg border-b border-ender-border p-4 space-y-3 w-full">
                 <div className="relative">
                   <input
                     type="text"
@@ -661,7 +628,7 @@
                 <div className="pt-2 border-t border-ender-border flex justify-between items-center text-xs">
                   <button
                     onClick={() => { setIsAdminOpen(true); setIsMobileNav(false); }}
-                    className="text-purple-400 font-bold flex items-center gap-1.5"
+                    className="text-purple-400 font-bold flex items-center gap-1.5 active:scale-95"
                   >
                     <i className="fa-solid fa-lock text-xs"></i> Admin Inventario
                   </button>
@@ -679,8 +646,7 @@
           </header>
 
           {/* Hero Section: Artist Banner */}
-          {}
-          <section className="relative overflow-hidden py-8 sm:py-12 bg-gradient-to-b from-ender-bg via-purple-950/20 to-ender-bg border-b border-ender-border">
+          <section className="relative overflow-hidden py-8 sm:py-12 bg-gradient-to-b from-ender-bg via-purple-950/20 to-ender-bg border-b border-ender-border w-full">
             <div className="absolute top-0 right-1/4 w-80 h-80 bg-ender-accent/10 rounded-full filter blur-3xl pointer-events-none"></div>
             <div className="absolute bottom-0 left-1/4 w-80 h-80 bg-ender-purple/10 rounded-full filter blur-3xl pointer-events-none"></div>
 
@@ -751,7 +717,7 @@
                           <span className="text-base font-extrabold text-ender-yellow">Desde S/. 25.00</span>
                           <button
                             onClick={() => openModal(PRODUCTS[0])}
-                            className="px-3 py-1 rounded-lg badge-pop text-white text-[11px] font-bold"
+                            className="px-3 py-1 rounded-lg badge-pop text-white text-[11px] font-bold active:scale-95"
                           >
                             Ver Tarifas
                           </button>
@@ -765,12 +731,11 @@
             </div>
           </section>
 
-          {/* Main Products Catalog */}
           {}
-          <main id="catalogo" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-1">
+          <main id="catalogo" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-1 w-full relative">
             
             {/* Header section & Mobile Filter Pills */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 border-b border-ender-border pb-4">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 border-b border-ender-border pb-4 w-full">
               <div>
                 <span className="text-ender-accent font-bold text-[11px] uppercase tracking-wider block mb-0.5">
                   <i className="fa-solid fa-sparkles text-xs mr-1 text-ender-yellow"></i> Catálogo de Merch
@@ -781,12 +746,12 @@
               </div>
 
               {/* Mobile Horizontal Pill Filters */}
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 w-full md:w-auto">
                 {["Todos", "Comisiones", "Standees & Llaveros", "Prints", "Pines & Stickers", "Peluches"].map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all active:scale-95 ${
                       selectedCategory === cat
                         ? "bg-ender-accent text-white shadow-glow-pink"
                         : "bg-ender-card text-ender-subtext border border-ender-border hover:border-gray-600"
@@ -806,15 +771,15 @@
                 <p className="text-xs text-ender-subtext mb-4">Intenta cambiando el filtro o la búsqueda.</p>
                 <button
                   onClick={() => { setSelectedCategory("Todos"); setSearchQuery(""); }}
-                  className="px-4 py-2 rounded-xl badge-pop text-white text-xs font-bold uppercase"
+                  className="px-4 py-2 rounded-xl badge-pop text-white text-xs font-bold uppercase active:scale-95"
                 >
                   Ver Todo
                 </button>
               </div>
             )}
 
-            {/* Products Grid: 2 columns on mobile for fast scanning */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+            {/* Products Grid: Horizontal Swipe on Mobile, Grid on Desktop */}
+            <div className="flex md:grid md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 overflow-x-auto overscroll-x-contain snap-x snap-mandatory no-scrollbar pb-8 -mx-4 px-4 sm:-mx-6 sm:px-6 md:mx-0 md:px-0">
               {filteredProducts.map((product) => {
                 const currentStock = stocks[product.id] ?? product.stock;
                 const isOutOfStock = currentStock <= 0;
@@ -822,7 +787,7 @@
                 return (
                   <div
                     key={product.id}
-                    className="glass-card rounded-2xl border border-ender-border overflow-hidden flex flex-col justify-between hover:border-ender-accent/60 transition duration-300 group active:scale-[0.98]"
+                    className="snap-center flex-none w-[82vw] sm:w-[45vw] md:w-auto glass-card rounded-2xl border border-ender-border overflow-hidden flex flex-col justify-between hover:border-ender-accent/60 transition duration-300 group"
                   >
                     {/* Image Container */}
                     <div 
@@ -871,7 +836,7 @@
 
                         <h4 
                           onClick={() => openModal(product)}
-                          className="font-bold text-white text-xs sm:text-sm leading-snug line-clamp-2 hover:text-ender-accent cursor-pointer transition mb-2"
+                          className="font-bold text-white text-sm leading-snug line-clamp-2 hover:text-ender-accent cursor-pointer transition mb-2"
                         >
                           {product.name}
                         </h4>
@@ -879,7 +844,7 @@
 
                       <div>
                         <div className="flex items-baseline gap-1.5 my-2">
-                          <span className="text-base sm:text-lg font-extrabold text-ender-yellow">S/. {product.price.toFixed(2)}</span>
+                          <span className="text-lg font-extrabold text-ender-yellow">S/. {product.price.toFixed(2)}</span>
                           {product.originalPrice && (
                             <span className="text-[10px] text-gray-500 line-through">S/. {product.originalPrice.toFixed(2)}</span>
                           )}
@@ -888,7 +853,7 @@
                         {/* Touch Action Buttons */}
                         <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-ender-border">
                           <button
-                            onClick={(e) => { e.stopPropagation(); addToCart(product); }}
+                            onClick={() => addToCart(product)}
                             disabled={isOutOfStock}
                             className={`py-2 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1 active:scale-95 ${
                               isOutOfStock
@@ -904,7 +869,6 @@
                             href={getDirectItemWpUrl(product, product.sizes[0], product.colors ? product.colors[0] : 'Estándar', 1)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
                             className="py-2 rounded-xl bg-emerald-950/60 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 text-[11px] font-bold transition flex items-center justify-center gap-1 active:scale-95"
                           >
                             <i className="fa-brands fa-whatsapp text-xs"></i>
@@ -920,9 +884,9 @@
             </div>
           </main>
 
-          {/* Artist Links Banner */}
           {}
-          <section className="bg-ender-card border-y border-ender-border py-8 sm:py-12 my-6">
+          {/* Artist Links Banner */}
+          <section className="bg-ender-card border-y border-ender-border py-8 sm:py-12 my-6 w-full">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="glass-card rounded-3xl p-6 sm:p-8 border border-pink-500/30 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
                 
@@ -943,7 +907,7 @@
                     href={INSTAGRAM_TIENDA}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg transition"
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg transition active:scale-95"
                   >
                     <i className="fa-brands fa-instagram text-base"></i>
                     <span>@enderloco_store</span>
@@ -953,7 +917,7 @@
                     href={INSTAGRAM_PRINCIPAL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2.5 rounded-xl bg-ender-bg hover:bg-black text-ender-cyan border border-ender-cyan/40 font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition"
+                    className="px-4 py-2.5 rounded-xl bg-ender-bg hover:bg-black text-ender-cyan border border-ender-cyan/40 font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition active:scale-95"
                   >
                     <i className="fa-solid fa-paint-brush"></i>
                     <span>@ender_drawner</span>
@@ -965,8 +929,7 @@
           </section>
 
           {/* Footer */}
-          {}
-          <footer className="bg-ender-bg border-t border-ender-border text-ender-subtext py-8">
+          <footer className="bg-ender-bg border-t border-ender-border text-ender-subtext py-8 w-full pb-safe">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-xs mb-6">
               
               <div className="space-y-3">
@@ -992,13 +955,13 @@
               <div>
                 <h5 className="text-white font-bold text-xs mb-2 uppercase tracking-wider">Contacto & Redes</h5>
                 <ul className="space-y-1.5 text-[11px]">
-                  <li><button onClick={() => setIsWpOpen(true)} className="hover:text-emerald-400 flex items-center gap-1"><i className="fa-brands fa-whatsapp text-emerald-400"></i> Pedidos por WhatsApp</button></li>
+                  <li><button onClick={() => setIsWpOpen(true)} className="hover:text-emerald-400 flex items-center gap-1 active:scale-95"><i className="fa-brands fa-whatsapp text-emerald-400"></i> Pedidos por WhatsApp</button></li>
                   <li><a href={INSTAGRAM_TIENDA} target="_blank" rel="noopener noreferrer" className="hover:text-pink-400 flex items-center gap-1"><i className="fa-brands fa-instagram text-pink-400"></i> Instagram Tiendita</a></li>
                   <li><a href={FACEBOOK_URL} target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 flex items-center gap-1"><i className="fa-brands fa-facebook text-blue-400"></i> Facebook Oficial</a></li>
                   <li>
                     <button 
                       onClick={() => setIsAdminOpen(true)} 
-                      className="text-purple-400 hover:text-purple-300 font-bold flex items-center gap-1 mt-1"
+                      className="text-purple-400 hover:text-purple-300 font-bold flex items-center gap-1 mt-1 active:scale-95"
                     >
                       <i className="fa-solid fa-lock text-xs"></i> Panel Admin (Gestión de Stock)
                     </button>
@@ -1018,18 +981,18 @@
 
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 border-t border-ender-border text-center sm:flex sm:justify-between text-[11px] text-gray-500">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 border-t border-ender-border text-center sm:flex sm:justify-between text-[11px] text-gray-500 mb-4 sm:mb-0">
               <p>© 2026 EnderTiendita :v • Ender Rivera Art. Todos los derechos reservados.</p>
               <p className="mt-1 sm:mt-0">Perú • Envíos a todo el país</p>
             </div>
           </footer>
 
-          {/* Shopping Cart Drawer */}
           {}
+          {/* Shopping Cart Drawer */}
           {isCartOpen && (
             <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm animate-fadeIn">
               <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-                <div className="w-screen max-w-md h-[100dvh] bg-ender-bg border-l border-ender-border flex flex-col justify-between shadow-2xl">
+                <div className="w-screen max-w-md bg-ender-bg border-l border-ender-border flex flex-col justify-between shadow-2xl pb-safe">
                   
                   {/* Cart Header */}
                   <div className="p-4 border-b border-ender-border flex items-center justify-between bg-ender-card">
@@ -1039,7 +1002,7 @@
                     </div>
                     <button
                       onClick={() => setIsCartOpen(false)}
-                      className="w-8 h-8 rounded-lg bg-ender-bg text-gray-400 hover:text-white flex items-center justify-center border border-ender-border"
+                      className="w-8 h-8 rounded-lg bg-ender-bg text-gray-400 hover:text-white flex items-center justify-center border border-ender-border active:scale-95"
                     >
                       <i className="fa-solid fa-xmark"></i>
                     </button>
@@ -1072,7 +1035,7 @@
                             <div className="flex flex-col items-end gap-1.5">
                               <button
                                 onClick={() => setCart(cart.filter(i => i.key !== item.key))}
-                                className="text-gray-500 hover:text-ender-accent text-xs"
+                                className="text-gray-500 hover:text-ender-accent text-xs p-1"
                               >
                                 <i className="fa-solid fa-trash-can"></i>
                               </button>
@@ -1085,7 +1048,7 @@
                                       setCart(cart.filter(i => i.key !== item.key));
                                     }
                                   }}
-                                  className="text-gray-400 hover:text-white px-1 font-bold"
+                                  className="text-gray-400 hover:text-white px-1 font-bold p-1"
                                 >-</button>
                                 <span className="px-1.5 font-bold text-white text-xs">{item.quantity}</span>
                                 <button
@@ -1096,7 +1059,7 @@
                                       notify(`Stock máximo: ${currentProductStock} unidades`);
                                     }
                                   }}
-                                  className="text-gray-400 hover:text-white px-1 font-bold"
+                                  className="text-gray-400 hover:text-white px-1 font-bold p-1"
                                 >+</button>
                               </div>
                             </div>
@@ -1108,7 +1071,7 @@
 
                   {/* Cart Footer */}
                   {cart.length > 0 && (
-                    <div className="p-4 border-t border-ender-border bg-ender-card space-y-3 pb-safe">
+                    <div className="p-4 border-t border-ender-border bg-ender-card space-y-3">
                       <div className="flex justify-between text-sm text-white font-extrabold">
                         <span>Total a pagar:</span>
                         <span className="text-ender-yellow">S/. {subtotal.toFixed(2)}</span>
@@ -1132,32 +1095,30 @@
           )}
 
           {/* Detail Modal for Selected Product */}
-          {}
           {selectedProduct && (() => {
             const currentStock = stocks[selectedProduct.id] ?? selectedProduct.stock;
             const isOutOfStock = currentStock <= 0;
 
             return (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-                {/* landscape:flex-row adapta el modal a horizontal si rotan el celular */}
-                <div className="bg-ender-card w-full max-w-2xl rounded-3xl border border-ender-border overflow-hidden shadow-2xl relative max-h-[90dvh] flex flex-col landscape:flex-row md:flex-row">
+                <div className="bg-ender-card w-full max-w-2xl rounded-3xl border border-ender-border overflow-hidden shadow-2xl relative max-h-[90vh] flex flex-col md:flex-row landscape:flex-row">
                   
                   <button
                     onClick={() => setSelectedProduct(null)}
-                    className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-ender-bg text-gray-400 hover:text-white flex items-center justify-center border border-ender-border active:scale-90"
+                    className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-ender-bg text-gray-400 hover:text-white flex items-center justify-center border border-ender-border active:scale-95 shadow-md"
                   >
                     <i className="fa-solid fa-xmark"></i>
                   </button>
 
                   {/* Modal Product Image */}
-                  <div className="landscape:w-2/5 md:w-1/2 bg-ender-bg p-4 flex items-center justify-center relative flex-shrink-0">
+                  <div className="md:w-1/2 landscape:w-1/2 bg-ender-bg p-4 flex items-center justify-center relative min-h-[40vh] md:min-h-[auto]">
                     <img
                       src={selectedProduct.image}
                       alt={selectedProduct.name}
                       onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }}
-                      className="w-full h-44 landscape:h-full md:h-80 object-cover rounded-2xl"
+                      className="w-full h-full object-cover rounded-2xl absolute inset-0 md:relative landscape:relative"
                     />
-                    <div className="absolute bottom-6 left-6">
+                    <div className="absolute bottom-6 left-6 z-10">
                       {isOutOfStock ? (
                         <span className="bg-rose-950 text-rose-300 border border-rose-500 text-[10px] font-bold px-2.5 py-1 rounded-lg">
                           Agotado
@@ -1171,7 +1132,7 @@
                   </div>
 
                   {/* Modal Details */}
-                  <div className="landscape:w-3/5 md:w-1/2 p-4 sm:p-5 flex flex-col justify-between overflow-y-auto space-y-3">
+                  <div className="md:w-1/2 landscape:w-1/2 p-4 sm:p-5 flex flex-col justify-between overflow-y-auto space-y-3 z-10 bg-ender-card relative">
                     <div>
                       <span className="text-[10px] font-bold text-ender-purple uppercase tracking-wider">{selectedProduct.category}</span>
                       <h3 className="text-base sm:text-lg font-bold text-white leading-tight mt-0.5">{selectedProduct.name}</h3>
@@ -1196,7 +1157,7 @@
                               <button
                                 key={sz}
                                 onClick={() => setProductOption(sz)}
-                                className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition ${
+                                className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition active:scale-95 ${
                                   productOption === sz
                                     ? "bg-ender-accent text-white border-ender-accent shadow-glow-pink"
                                     : "bg-ender-bg text-ender-subtext border-ender-border"
@@ -1218,7 +1179,7 @@
                               <button
                                 key={c}
                                 onClick={() => setProductColor(c)}
-                                className={`px-2.5 py-1 rounded-xl text-xs font-semibold border transition ${
+                                className={`px-2.5 py-1 rounded-xl text-xs font-semibold border transition active:scale-95 ${
                                   productColor === c
                                     ? "bg-ender-purple text-white border-ender-purple"
                                     : "bg-ender-bg text-ender-subtext border-ender-border"
@@ -1237,7 +1198,7 @@
                         <div className="flex items-center bg-ender-bg rounded-xl border border-ender-border px-2 py-0.5">
                           <button 
                             onClick={() => setProductQty(Math.max(1, productQty - 1))} 
-                            className="text-gray-400 px-1 font-bold"
+                            className="text-gray-400 px-2 py-1 font-bold active:scale-90"
                           >-</button>
                           <span className="px-2 text-xs font-bold text-white">{productQty}</span>
                           <button 
@@ -1248,13 +1209,13 @@
                                 notify(`Stock máximo: ${currentStock}`);
                               }
                             }} 
-                            className="text-gray-400 px-1 font-bold"
+                            className="text-gray-400 px-2 py-1 font-bold active:scale-90"
                           >+</button>
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-2 pt-3 border-t border-ender-border pb-2">
+                    <div className="space-y-2 pt-3 border-t border-ender-border pb-safe md:pb-0">
                       <button
                         onClick={() => {
                           addToCart(selectedProduct, productOption, productColor, productQty);
@@ -1289,10 +1250,9 @@
           })()}
 
           {/* ADMIN & INVENTORY MODAL (Firebase Connected) */}
-          {}
           {isAdminOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-              <div className="bg-ender-card w-full max-w-3xl rounded-3xl border border-purple-500/40 shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]">
+              <div className="bg-ender-card w-full max-w-3xl rounded-3xl border border-purple-500/40 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] pb-safe">
                 
                 {/* Admin Modal Header */}
                 <div className="p-4 bg-purple-950/40 border-b border-purple-500/30 flex items-center justify-between">
@@ -1312,7 +1272,7 @@
                   </div>
                   <button
                     onClick={() => setIsAdminOpen(false)}
-                    className="w-8 h-8 rounded-lg bg-ender-bg text-gray-400 hover:text-white flex items-center justify-center border border-ender-border"
+                    className="w-8 h-8 rounded-lg bg-ender-bg text-gray-400 hover:text-white flex items-center justify-center border border-ender-border active:scale-95"
                   >
                     <i className="fa-solid fa-xmark"></i>
                   </button>
@@ -1320,7 +1280,7 @@
 
                 {/* Authentication Gate */}
                 {!isAdminAuth ? (
-                  <div className="p-6 sm:p-8 flex flex-col items-center justify-center text-center space-y-4">
+                  <div className="p-6 sm:p-8 flex flex-col items-center justify-center text-center space-y-4 pb-safe">
                     <div className="w-14 h-14 rounded-2xl bg-ender-bg border border-ender-border flex items-center justify-center text-ender-yellow text-2xl shadow-inner">
                       <i className="fa-solid fa-lock"></i>
                     </div>
@@ -1341,11 +1301,11 @@
                       />
                       <button
                         type="submit"
-                        className="w-full py-2.5 rounded-xl badge-pop text-white font-bold text-xs uppercase tracking-wider shadow-glow-pink"
+                        className="w-full py-2.5 rounded-xl badge-pop text-white font-bold text-xs uppercase tracking-wider shadow-glow-pink active:scale-95"
                       >
                         Ingresar al Gestor
                       </button>
-                      <p className="text-[10px] text-gray-500">Clave de demostración: <strong className="text-ender-yellow">1234</strong></p>
+                      <p className="text-[10px] text-gray-500">Clave de demostración: <strong className="text-ender-yellow">1234</strong> o <strong className="text-ender-yellow">ender</strong></p>
                     </form>
                   </div>
                 ) : (
@@ -1359,19 +1319,18 @@
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => {
-                            // Reset to defaults
                             const def = {};
                             PRODUCTS.forEach(p => { def[p.id] = p.stock; });
                             setTempStocks(def);
                             notify("Restaurado a valores base");
                           }}
-                          className="px-3 py-1.5 rounded-lg bg-ender-card hover:bg-gray-800 text-gray-400 border border-ender-border text-[11px]"
+                          className="px-3 py-1.5 rounded-lg bg-ender-card hover:bg-gray-800 text-gray-400 border border-ender-border text-[11px] active:scale-95"
                         >
                           Restablecer
                         </button>
                         <button
                           onClick={() => setIsAdminAuth(false)}
-                          className="px-3 py-1.5 rounded-lg bg-rose-950/40 text-rose-300 border border-rose-800/40 text-[11px]"
+                          className="px-3 py-1.5 rounded-lg bg-rose-950/40 text-rose-300 border border-rose-800/40 text-[11px] active:scale-95"
                         >
                           Cerrar Sesión
                         </button>
@@ -1412,12 +1371,12 @@
                             <div className="flex items-center gap-1.5 self-end sm:self-center">
                               <button
                                 onClick={() => adjustTempStock(prod.id, -5)}
-                                className="w-7 h-7 rounded-lg bg-ender-bg hover:bg-gray-800 text-gray-300 border border-ender-border text-xs font-bold"
+                                className="w-8 h-8 sm:w-7 sm:h-7 rounded-lg bg-ender-bg hover:bg-gray-800 text-gray-300 border border-ender-border text-xs font-bold active:scale-90"
                                 title="Restar 5"
                               >-5</button>
                               <button
                                 onClick={() => adjustTempStock(prod.id, -1)}
-                                className="w-7 h-7 rounded-lg bg-ender-bg hover:bg-gray-800 text-gray-300 border border-ender-border text-xs font-bold"
+                                className="w-8 h-8 sm:w-7 sm:h-7 rounded-lg bg-ender-bg hover:bg-gray-800 text-gray-300 border border-ender-border text-xs font-bold active:scale-90"
                                 title="Restar 1"
                               >-</button>
                               
@@ -1426,17 +1385,17 @@
                                 min="0"
                                 value={count}
                                 onChange={(e) => setDirectTempStock(prod.id, e.target.value)}
-                                className="w-14 bg-ender-bg text-center text-xs font-black text-white rounded-lg py-1 border border-ender-border focus:outline-none focus:border-ender-accent"
+                                className="w-14 h-8 sm:h-7 bg-ender-bg text-center text-xs font-black text-white rounded-lg border border-ender-border focus:outline-none focus:border-ender-accent m-0 p-0"
                               />
 
                               <button
                                 onClick={() => adjustTempStock(prod.id, 1)}
-                                className="w-7 h-7 rounded-lg bg-ender-bg hover:bg-gray-800 text-emerald-400 border border-ender-border text-xs font-bold"
+                                className="w-8 h-8 sm:w-7 sm:h-7 rounded-lg bg-ender-bg hover:bg-gray-800 text-emerald-400 border border-ender-border text-xs font-bold active:scale-90"
                                 title="Sumar 1"
                               >+</button>
                               <button
                                 onClick={() => adjustTempStock(prod.id, 5)}
-                                className="w-7 h-7 rounded-lg bg-ender-bg hover:bg-gray-800 text-emerald-400 border border-ender-border text-xs font-bold"
+                                className="w-8 h-8 sm:w-7 sm:h-7 rounded-lg bg-ender-bg hover:bg-gray-800 text-emerald-400 border border-ender-border text-xs font-bold active:scale-90"
                                 title="Sumar 5"
                               >+5</button>
                             </div>
@@ -1449,21 +1408,21 @@
 
                 {/* Admin Modal Footer */}
                 {isAdminAuth && (
-                  <div className="p-4 bg-ender-bg border-t border-ender-border flex flex-col sm:flex-row items-center justify-between gap-3 pb-safe">
+                  <div className="p-4 bg-ender-bg border-t border-ender-border flex flex-col sm:flex-row items-center justify-between gap-3">
                     <span className="text-[11px] text-ender-subtext text-center sm:text-left">
                       💡 Los cambios se sincronizan en la nube automáticamente para todos tus clientes.
                     </span>
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                       <button
                         onClick={() => setIsAdminOpen(false)}
-                        className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-ender-card text-gray-300 border border-ender-border text-xs font-bold hover:text-white"
+                        className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-ender-card text-gray-300 border border-ender-border text-xs font-bold hover:text-white active:scale-95"
                       >
                         Cancelar
                       </button>
                       <button
                         onClick={handleSaveStockToFirebase}
                         disabled={isSavingStock}
-                        className="flex-1 sm:flex-none px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-1.5"
+                        className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-1.5 active:scale-95"
                       >
                         {isSavingStock ? (
                           <>
@@ -1486,8 +1445,7 @@
           )}
 
           {/* Floating WhatsApp Widget */}
-          {}
-          <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end">
+          <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] md:bottom-4 right-4 z-40 flex flex-col items-end">
             
             {/* Popover */}
             {isWpOpen && (
@@ -1502,7 +1460,7 @@
                       <p className="text-[10px] text-emerald-300">Consultas & Yape directo</p>
                     </div>
                   </div>
-                  <button onClick={() => setIsWpOpen(false)} className="text-emerald-300 hover:text-white">
+                  <button onClick={() => setIsWpOpen(false)} className="text-emerald-300 hover:text-white p-1 active:scale-90">
                     <i className="fa-solid fa-xmark"></i>
                   </button>
                 </div>
@@ -1515,31 +1473,31 @@
                   <div className="space-y-1">
                     <button
                       onClick={() => sendCustomWp("Hola Ender! Quisiera consultar precios y cupos para una comisión de dibujo.")}
-                      className="w-full text-left p-1.5 rounded-xl bg-ender-card hover:bg-emerald-950/40 text-emerald-400 border border-emerald-900/40 text-[11px]"
+                      className="w-full text-left p-2 rounded-xl bg-ender-card hover:bg-emerald-950/40 text-emerald-400 border border-emerald-900/40 text-[11px] active:scale-95"
                     >
                       🎨 Consultar Comisiones
                     </button>
                     <button
                       onClick={() => sendCustomWp("Hola! Quisiera saber el costo de envío a mi provincia o si entregas en la próxima feria.")}
-                      className="w-full text-left p-1.5 rounded-xl bg-ender-card hover:bg-emerald-950/40 text-emerald-400 border border-emerald-900/40 text-[11px]"
+                      className="w-full text-left p-2 rounded-xl bg-ender-card hover:bg-emerald-950/40 text-emerald-400 border border-emerald-900/40 text-[11px] active:scale-95"
                     >
                       📦 Envíos y Entrega en Feria
                     </button>
                   </div>
                 </div>
 
-                <div className="p-2 bg-ender-card border-t border-ender-border flex items-center gap-1.5">
+                <div className="p-2 bg-ender-card border-t border-ender-border flex items-center gap-1.5 pb-safe md:pb-2">
                   <input
                     type="text"
                     placeholder="Escribe tu mensaje..."
                     value={wpMsg}
                     onChange={(e) => setWpMsg(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && sendCustomWp()}
-                    className="flex-1 bg-ender-bg text-xs text-white placeholder-gray-500 rounded-xl px-3 py-1.5 border border-ender-border focus:outline-none focus:border-emerald-500"
+                    className="flex-1 bg-ender-bg text-xs text-white placeholder-gray-500 rounded-xl px-3 py-2 border border-ender-border focus:outline-none focus:border-emerald-500"
                   />
                   <button
                     onClick={() => sendCustomWp()}
-                    className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xs"
+                    className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xs active:scale-90"
                   >
                     <i className="fa-solid fa-paper-plane"></i>
                   </button>
@@ -1550,19 +1508,18 @@
             {/* Trigger Button */}
             <button
               onClick={() => setIsWpOpen(!isWpOpen)}
-              className="w-12 h-12 sm:w-14 sm:h-14 mb-safe rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center shadow-2xl border border-white/20 transition transform hover:scale-105 active:scale-90"
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center shadow-2xl border border-white/20 transition transform hover:scale-105 active:scale-90"
               aria-label="WhatsApp Chat"
             >
               <i className="fa-brands fa-whatsapp text-2xl sm:text-3xl"></i>
             </button>
           </div>
 
-          {/* Mobile Dock Navigation Bar */}
-          {}
-          <div className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-ender-bg/95 backdrop-blur-lg border-t border-ender-border px-4 pb-safe pt-2 flex items-center justify-around text-xs">
+          {/* Mobile Dock Navigation Bar (PWA Style) */}
+          <div className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-ender-bg/95 backdrop-blur-lg border-t border-ender-border px-4 py-2 flex items-center justify-around text-xs pb-safe">
             <button
               onClick={() => { setSelectedCategory("Todos"); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              className="flex flex-col items-center gap-0.5 text-gray-400 hover:text-white active:scale-90 transition-transform"
+              className="flex flex-col items-center gap-1 p-1 text-gray-400 hover:text-white active:scale-95"
             >
               <i className="fa-solid fa-house text-sm"></i>
               <span className="text-[10px]">Inicio</span>
@@ -1570,7 +1527,7 @@
 
             <a
               href="#catalogo"
-              className="flex flex-col items-center gap-0.5 text-gray-400 hover:text-white active:scale-90 transition-transform"
+              className="flex flex-col items-center gap-1 p-1 text-gray-400 hover:text-white active:scale-95"
             >
               <i className="fa-solid fa-layer-group text-sm"></i>
               <span className="text-[10px]">Catálogo</span>
@@ -1578,7 +1535,7 @@
 
             <button
               onClick={() => setIsAdminOpen(true)}
-              className="flex flex-col items-center gap-0.5 text-purple-400 active:scale-90 transition-transform"
+              className="flex flex-col items-center gap-1 p-1 text-purple-400 active:scale-95"
             >
               <i className="fa-solid fa-boxes-stacked text-sm"></i>
               <span className="text-[10px]">Stock</span>
@@ -1586,23 +1543,15 @@
 
             <button
               onClick={() => setIsCartOpen(true)}
-              className="flex flex-col items-center gap-0.5 text-ender-accent relative active:scale-90 transition-transform"
+              className="flex flex-col items-center gap-1 p-1 text-ender-accent relative active:scale-95"
             >
               <i className="fa-solid fa-basket-shopping text-sm"></i>
               <span className="text-[10px]">Carrito</span>
               {cartCount > 0 && (
-                <span className="absolute -top-1 right-1 bg-ender-accent text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-ender-bg">
+                <span className="absolute -top-1.5 right-0 bg-ender-accent text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
                   {cartCount}
                 </span>
               )}
-            </button>
-
-            <button
-              onClick={() => setIsWpOpen(true)}
-              className="flex flex-col items-center gap-0.5 text-emerald-400 active:scale-90 transition-transform"
-            >
-              <i className="fa-brands fa-whatsapp text-sm"></i>
-              <span className="text-[10px]">WhatsApp</span>
             </button>
           </div>
 
