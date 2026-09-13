@@ -21,6 +21,37 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+  <!-- Firebase Cloud Integration (Modular SDK) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'ender-tiendita-store';
+    let db = null;
+    let auth = null;
+
+    try {
+      if (typeof __firebase_config !== 'undefined') {
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+        const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        if (token) {
+          await signInWithCustomToken(auth, token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      }
+    } catch (err) {
+      console.warn("Firebase auto-init:", err);
+    }
+
+    window.__enderFirebase = { db, auth, appId, doc, setDoc, onSnapshot };
+    window.dispatchEvent(new CustomEvent('ender-firebase-ready'));
+  </script>
+
   <!-- Tailwind Custom Config: Vibrant Gamer/Anime Palette -->
   <script>
     tailwind.config = {
@@ -100,10 +131,13 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
 
-    const WHATSAPP_NUMBER = "51922279138"; // Reemplazar con el número oficial
+    const WHATSAPP_NUMBER = "51922279138"; 
     const INSTAGRAM_TIENDA = "https://www.instagram.com/enderloco_store/";
     const INSTAGRAM_PRINCIPAL = "https://www.instagram.com/ender_drawner/";
     const FACEBOOK_URL = "https://www.facebook.com/ender.rivera.332";
+
+    // Fallback image in case of broken link
+    const FALLBACK_IMG = "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=700&auto=format&fit=crop&q=80";
 
     // Products based on EnderTiendita Instagram catalog
     const PRODUCTS = [
@@ -180,7 +214,7 @@
         rating: 5.0,
         reviewsCount: 62,
         badge: "FANART PRINT",
-        image: "prints.jpg",
+        image: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=700&auto=format&fit=crop&q=80",
         description: "Láminas de impresión de alta calidad en papel ilustración brillante. Disponibles en tamaño A4 y A3 de tus series y fanarts favoritos.",
         optionsLabel: "Tamaño de Print",
         sizes: ["Print A4 (S/. 8.00)", "Print A3 (S/. 15.00)"],
@@ -252,13 +286,63 @@
       const [isMobileNav, setIsMobileNav] = useState(false);
       const [toast, setToast] = useState(null);
 
+      // Stock & Inventory State
+      const initialStockMap = useMemo(() => {
+        const map = {};
+        PRODUCTS.forEach(p => { map[p.id] = p.stock; });
+        return map;
+      }, []);
+
+      const [stocks, setStocks] = useState(initialStockMap);
+      const [isAdminOpen, setIsAdminOpen] = useState(false);
+      const [adminPass, setAdminPass] = useState("");
+      const [isAdminAuth, setIsAdminAuth] = useState(false);
+      const [isSavingStock, setIsSavingStock] = useState(false);
+      const [tempStocks, setTempStocks] = useState(initialStockMap);
+
       // Trigger Toast notification
       const notify = (msg) => {
         setToast(msg);
         setTimeout(() => setToast(null), 2500);
       };
 
-      // Filter catalog
+      useEffect(() => {
+        const setupFirebaseSync = () => {
+          const fb = window.__enderFirebase;
+          if (!fb || !fb.db) return;
+
+          try {
+            // Strict Path Rule: /artifacts/{appId}/public/data/{collectionName}/{documentId}
+            const stockDocRef = fb.doc(fb.db, 'artifacts', fb.appId, 'public', 'data', 'inventory', 'stock_counts');
+            
+            const unsubscribe = fb.onSnapshot(stockDocRef, (snapshot) => {
+              if (snapshot.exists()) {
+                const data = snapshot.data();
+                if (data && data.items) {
+                  setStocks(prev => ({ ...prev, ...data.items }));
+                  setTempStocks(prev => ({ ...prev, ...data.items }));
+                }
+              }
+            }, (error) => {
+              console.warn("Error leyendo inventario de Firebase:", error);
+            });
+
+            return unsubscribe;
+          } catch (e) {
+            console.warn("Firebase snapshot error:", e);
+          }
+        };
+
+        let unsub = setupFirebaseSync();
+        window.addEventListener('ender-firebase-ready', () => {
+          unsub = setupFirebaseSync();
+        });
+
+        return () => {
+          if (unsub && typeof unsub === 'function') unsub();
+        };
+      }, []);
+
       const filteredProducts = useMemo(() => {
         return PRODUCTS.filter(p => {
           const matchCat = selectedCategory === "Todos" || p.category === selectedCategory;
@@ -268,8 +352,14 @@
         });
       }, [selectedCategory, searchQuery]);
 
-      // Add to Shopping Cart
+      // Add to Shopping Cart with Stock Validation
       const addToCart = (product, option = null, color = null, qty = 1) => {
+        const currentStock = stocks[product.id] ?? product.stock;
+        if (currentStock <= 0) {
+          notify(`⚠️ Producto agotado: ${product.name}`);
+          return;
+        }
+
         const itemOpt = option || product.sizes[0];
         const itemColor = color || (product.colors ? product.colors[0] : "Estándar");
         const key = `${product.id}-${itemOpt}-${itemColor}`;
@@ -277,6 +367,11 @@
         setCart(prev => {
           const idx = prev.findIndex(item => item.key === key);
           if (idx > -1) {
+            const currentCartQty = prev[idx].quantity;
+            if (currentCartQty + qty > currentStock) {
+              notify(`Solo quedan ${currentStock} unidades disponibles`);
+              return prev;
+            }
             const copy = [...prev];
             copy[idx].quantity += qty;
             return copy;
@@ -289,7 +384,7 @@
             image: product.image,
             option: itemOpt,
             color: itemColor,
-            quantity: qty
+            quantity: Math.min(qty, currentStock)
           }];
         });
         notify(`¡Añadido! ${product.name}`);
@@ -331,6 +426,61 @@
         const fullText = `*Consulta desde EnderTiendita Web:* ${textToSend}`;
         window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(fullText)}`, '_blank');
         setWpMsg("");
+      };
+
+      const handleAdminLogin = (e) => {
+        e.preventDefault();
+        // PIN seguro para Ender (1234 o ender)
+        if (adminPass === "1234" || adminPass.toLowerCase() === "ender") {
+          setIsAdminAuth(true);
+          setTempStocks({ ...stocks });
+          setAdminPass("");
+          notify("🔓 Sesión de Administrador iniciada");
+        } else {
+          notify("❌ Clave incorrecta (Prueba: 1234)");
+        }
+      };
+
+      const handleSaveStockToFirebase = async () => {
+        setIsSavingStock(true);
+        setStocks({ ...tempStocks });
+
+        const fb = window.__enderFirebase;
+        if (fb && fb.db) {
+          try {
+            const stockDocRef = fb.doc(fb.db, 'artifacts', fb.appId, 'public', 'data', 'inventory', 'stock_counts');
+            await fb.setDoc(stockDocRef, {
+              items: tempStocks,
+              updatedAt: new Date().toISOString()
+            }, { merge: true });
+            notify("✅ ¡Inventario guardado en la Nube!");
+          } catch (err) {
+            console.error("Error al guardar stock:", err);
+            notify("⚠️ Guardado localmente (sin conexión a Firebase)");
+          }
+        } else {
+          notify("✅ Stock actualizado en la sesión actual");
+        }
+        setIsSavingStock(false);
+        setIsAdminOpen(false);
+      };
+
+      const adjustTempStock = (productId, delta) => {
+        setTempStocks(prev => {
+          const current = prev[productId] ?? 0;
+          return {
+            ...prev,
+            [productId]: Math.max(0, current + delta)
+          };
+        });
+      };
+
+      const setDirectTempStock = (productId, value) => {
+        const val = parseInt(value, 10);
+        setTempStocks(prev => ({
+          ...prev,
+          [productId]: isNaN(val) ? 0 : Math.max(0, val)
+        }));
       };
 
       return (
@@ -392,6 +542,16 @@
               {/* Header Action Buttons */}
               <div className="flex items-center gap-2 sm:gap-3">
                 
+                {/* Admin Stock Button */}
+                <button
+                  onClick={() => setIsAdminOpen(true)}
+                  className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-purple-950/50 hover:bg-purple-900/70 border border-purple-500/40 text-purple-300 text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                  title="Administrador de Stock & Inventario"
+                >
+                  <i className="fa-solid fa-boxes-stacked text-xs text-ender-cyan"></i>
+                  <span className="hidden sm:inline">Inventario</span>
+                </button>
+
                 {/* Social Instagram Link */}
                 <a
                   href={INSTAGRAM_TIENDA}
@@ -469,6 +629,12 @@
                 </div>
 
                 <div className="pt-2 border-t border-ender-border flex justify-between items-center text-xs">
+                  <button
+                    onClick={() => { setIsAdminOpen(true); setIsMobileNav(false); }}
+                    className="text-purple-400 font-bold flex items-center gap-1.5"
+                  >
+                    <i className="fa-solid fa-lock text-xs"></i> Admin Inventario
+                  </button>
                   <a
                     href={INSTAGRAM_TIENDA}
                     target="_blank"
@@ -476,14 +642,6 @@
                     className="text-pink-400 font-bold flex items-center gap-1.5"
                   >
                     <i className="fa-brands fa-instagram"></i> @enderloco_store
-                  </a>
-                  <a
-                    href={FACEBOOK_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-400 font-bold flex items-center gap-1.5"
-                  >
-                    <i className="fa-brands fa-facebook"></i> Facebook
                   </a>
                 </div>
               </div>
@@ -550,6 +708,7 @@
                       <img 
                         src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=700&auto=format&fit=crop&q=80" 
                         alt="Ender Rivera Commission Promo"
+                        onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }}
                         className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                       />
                       <div className="absolute top-3 left-3 bg-ender-accent text-white text-[10px] font-extrabold px-2.5 py-1 rounded-lg uppercase shadow">
@@ -626,79 +785,107 @@
 
             {/* Products Grid: 2 columns on mobile for fast scanning */}
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
-              {filteredProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="glass-card rounded-2xl border border-ender-border overflow-hidden flex flex-col justify-between hover:border-ender-accent/60 transition duration-300 group"
-                >
-                  {/* Image Container */}
-                  <div 
-                    onClick={() => openModal(product)}
-                    className="relative aspect-square bg-ender-card overflow-hidden cursor-pointer"
+              {filteredProducts.map((product) => {
+                const currentStock = stocks[product.id] ?? product.stock;
+                const isOutOfStock = currentStock <= 0;
+
+                return (
+                  <div
+                    key={product.id}
+                    className="glass-card rounded-2xl border border-ender-border overflow-hidden flex flex-col justify-between hover:border-ender-accent/60 transition duration-300 group"
                   >
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                      loading="lazy"
-                    />
-                    
-                    {product.badge && (
-                      <span className="absolute top-2 left-2 bg-ender-bg/90 text-ender-cyan border border-ender-cyan/30 text-[9px] sm:text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wide">
-                        {product.badge}
-                      </span>
-                    )}
-                  </div>
+                    {/* Image Container */}
+                    <div 
+                      onClick={() => openModal(product)}
+                      className="relative aspect-square bg-ender-card overflow-hidden cursor-pointer"
+                    >
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                        loading="lazy"
+                      />
+                      
+                      {product.badge && (
+                        <span className="absolute top-2 left-2 bg-ender-bg/90 text-ender-cyan border border-ender-cyan/30 text-[9px] sm:text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wide">
+                          {product.badge}
+                        </span>
+                      )}
 
-                  {/* Card Info */}
-                  <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between text-[10px] text-ender-subtext mb-1">
-                        <span className="text-ender-purple font-bold uppercase">{product.category}</span>
-                        <span className="text-amber-400 font-bold"><i className="fa-solid fa-star text-[9px]"></i> {product.rating}</span>
-                      </div>
-
-                      <h4 
-                        onClick={() => openModal(product)}
-                        className="font-bold text-white text-xs sm:text-sm leading-snug line-clamp-2 hover:text-ender-accent cursor-pointer transition mb-2"
-                      >
-                        {product.name}
-                      </h4>
-                    </div>
-
-                    <div>
-                      <div className="flex items-baseline gap-1.5 my-2">
-                        <span className="text-base sm:text-lg font-extrabold text-ender-yellow">S/. {product.price.toFixed(2)}</span>
-                        {product.originalPrice && (
-                          <span className="text-[10px] text-gray-500 line-through">S/. {product.originalPrice.toFixed(2)}</span>
+                      {/* Stock presentation badge */}
+                      <div className="absolute bottom-2 left-2">
+                        {isOutOfStock ? (
+                          <span className="bg-rose-950/90 text-rose-300 border border-rose-600/50 text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider shadow">
+                            <i className="fa-solid fa-ban mr-1"></i> Agotado
+                          </span>
+                        ) : currentStock <= 5 ? (
+                          <span className="bg-amber-950/90 text-amber-300 border border-amber-500/50 text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider shadow animate-pulse">
+                            <i className="fa-solid fa-fire mr-1"></i> ¡Quedan {currentStock}!
+                          </span>
+                        ) : (
+                          <span className="bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 text-[9px] font-bold px-2 py-0.5 rounded-md tracking-wider shadow">
+                            <i className="fa-solid fa-box-open mr-1"></i> Stock: {currentStock}
+                          </span>
                         )}
                       </div>
-
-                      {/* Touch Action Buttons */}
-                      <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-ender-border">
-                        <button
-                          onClick={() => addToCart(product)}
-                          className="py-2 rounded-xl bg-ender-card hover:bg-ender-accent hover:text-white text-gray-300 border border-ender-border text-[11px] font-bold transition flex items-center justify-center gap-1"
-                        >
-                          <i className="fa-solid fa-cart-plus"></i>
-                          <span>Añadir</span>
-                        </button>
-                        
-                        <a
-                          href={getDirectItemWpUrl(product, product.sizes[0], product.colors ? product.colors[0] : 'Estándar', 1)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="py-2 rounded-xl bg-emerald-950/60 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 text-[11px] font-bold transition flex items-center justify-center gap-1"
-                        >
-                          <i className="fa-brands fa-whatsapp text-xs"></i>
-                          <span>Yapear</span>
-                        </a>
-                      </div>
                     </div>
 
+                    {/* Card Info */}
+                    <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between text-[10px] text-ender-subtext mb-1">
+                          <span className="text-ender-purple font-bold uppercase">{product.category}</span>
+                          <span className="text-amber-400 font-bold"><i className="fa-solid fa-star text-[9px]"></i> {product.rating}</span>
+                        </div>
+
+                        <h4 
+                          onClick={() => openModal(product)}
+                          className="font-bold text-white text-xs sm:text-sm leading-snug line-clamp-2 hover:text-ender-accent cursor-pointer transition mb-2"
+                        >
+                          {product.name}
+                        </h4>
+                      </div>
+
+                      <div>
+                        <div className="flex items-baseline gap-1.5 my-2">
+                          <span className="text-base sm:text-lg font-extrabold text-ender-yellow">S/. {product.price.toFixed(2)}</span>
+                          {product.originalPrice && (
+                            <span className="text-[10px] text-gray-500 line-through">S/. {product.originalPrice.toFixed(2)}</span>
+                          )}
+                        </div>
+
+                        {/* Touch Action Buttons */}
+                        <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-ender-border">
+                          <button
+                            onClick={() => addToCart(product)}
+                            disabled={isOutOfStock}
+                            className={`py-2 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1 ${
+                              isOutOfStock
+                                ? 'bg-ender-border text-gray-500 cursor-not-allowed border border-gray-700'
+                                : 'bg-ender-card hover:bg-ender-accent hover:text-white text-gray-300 border border-ender-border'
+                            }`}
+                          >
+                            <i className={`fa-solid ${isOutOfStock ? 'fa-ban' : 'fa-cart-plus'}`}></i>
+                            <span>{isOutOfStock ? 'Agotado' : 'Añadir'}</span>
+                          </button>
+                          
+                          <a
+                            href={getDirectItemWpUrl(product, product.sizes[0], product.colors ? product.colors[0] : 'Estándar', 1)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="py-2 rounded-xl bg-emerald-950/60 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 text-[11px] font-bold transition flex items-center justify-center gap-1"
+                          >
+                            <i className="fa-brands fa-whatsapp text-xs"></i>
+                            <span>Yapear</span>
+                          </a>
+                        </div>
+                      </div>
+
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </main>
 
@@ -777,6 +964,14 @@
                   <li><button onClick={() => setIsWpOpen(true)} className="hover:text-emerald-400 flex items-center gap-1"><i className="fa-brands fa-whatsapp text-emerald-400"></i> Pedidos por WhatsApp</button></li>
                   <li><a href={INSTAGRAM_TIENDA} target="_blank" rel="noopener noreferrer" className="hover:text-pink-400 flex items-center gap-1"><i className="fa-brands fa-instagram text-pink-400"></i> Instagram Tiendita</a></li>
                   <li><a href={FACEBOOK_URL} target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 flex items-center gap-1"><i className="fa-brands fa-facebook text-blue-400"></i> Facebook Oficial</a></li>
+                  <li>
+                    <button 
+                      onClick={() => setIsAdminOpen(true)} 
+                      className="text-purple-400 hover:text-purple-300 font-bold flex items-center gap-1 mt-1"
+                    >
+                      <i className="fa-solid fa-lock text-xs"></i> Panel Admin (Gestión de Stock)
+                    </button>
+                  </li>
                 </ul>
               </div>
 
@@ -828,41 +1023,55 @@
                         <p className="text-xs">¡Añade algún print, llavero o comisión!</p>
                       </div>
                     ) : (
-                      cart.map((item) => (
-                        <div key={item.key} className="bg-ender-card p-3 rounded-2xl border border-ender-border flex gap-3 items-center">
-                          <img src={item.image} alt={item.name} className="w-14 h-14 rounded-xl object-cover bg-ender-bg" />
-                          <div className="flex-1 min-w-0">
-                            <h5 className="text-xs font-bold text-white truncate">{item.name}</h5>
-                            <p className="text-[10px] text-ender-subtext">Opción: <span className="text-ender-cyan font-bold">{item.option}</span></p>
-                            <p className="text-xs font-extrabold text-ender-yellow mt-1">S/. {(item.price * item.quantity).toFixed(2)}</p>
-                          </div>
-                          <div className="flex flex-col items-end gap-1.5">
-                            <button
-                              onClick={() => setCart(cart.filter(i => i.key !== item.key))}
-                              className="text-gray-500 hover:text-ender-accent text-xs"
-                            >
-                              <i className="fa-solid fa-trash-can"></i>
-                            </button>
-                            <div className="flex items-center bg-ender-bg rounded-lg border border-ender-border px-1.5 py-0.5 text-xs">
+                      cart.map((item) => {
+                        const currentProductStock = stocks[item.id] ?? 99;
+                        return (
+                          <div key={item.key} className="bg-ender-card p-3 rounded-2xl border border-ender-border flex gap-3 items-center">
+                            <img 
+                              src={item.image} 
+                              alt={item.name} 
+                              onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }}
+                              className="w-14 h-14 rounded-xl object-cover bg-ender-bg" 
+                            />
+                            <div className="flex-1 min-w-0">
+                              <h5 className="text-xs font-bold text-white truncate">{item.name}</h5>
+                              <p className="text-[10px] text-ender-subtext">Opción: <span className="text-ender-cyan font-bold">{item.option}</span></p>
+                              <p className="text-xs font-extrabold text-ender-yellow mt-1">S/. {(item.price * item.quantity).toFixed(2)}</p>
+                            </div>
+                            <div className="flex flex-col items-end gap-1.5">
                               <button
-                                onClick={() => {
-                                  if (item.quantity > 1) {
-                                    setCart(cart.map(i => i.key === item.key ? {...i, quantity: i.quantity - 1} : i));
-                                  } else {
-                                    setCart(cart.filter(i => i.key !== item.key));
-                                  }
-                                }}
-                                className="text-gray-400 hover:text-white px-1 font-bold"
-                              >-</button>
-                              <span className="px-1.5 font-bold text-white text-xs">{item.quantity}</span>
-                              <button
-                                onClick={() => setCart(cart.map(i => i.key === item.key ? {...i, quantity: i.quantity + 1} : i))}
-                                className="text-gray-400 hover:text-white px-1 font-bold"
-                              >+</button>
+                                onClick={() => setCart(cart.filter(i => i.key !== item.key))}
+                                className="text-gray-500 hover:text-ender-accent text-xs"
+                              >
+                                <i className="fa-solid fa-trash-can"></i>
+                              </button>
+                              <div className="flex items-center bg-ender-bg rounded-lg border border-ender-border px-1.5 py-0.5 text-xs">
+                                <button
+                                  onClick={() => {
+                                    if (item.quantity > 1) {
+                                      setCart(cart.map(i => i.key === item.key ? {...i, quantity: i.quantity - 1} : i));
+                                    } else {
+                                      setCart(cart.filter(i => i.key !== item.key));
+                                    }
+                                  }}
+                                  className="text-gray-400 hover:text-white px-1 font-bold"
+                                >-</button>
+                                <span className="px-1.5 font-bold text-white text-xs">{item.quantity}</span>
+                                <button
+                                  onClick={() => {
+                                    if (item.quantity < currentProductStock) {
+                                      setCart(cart.map(i => i.key === item.key ? {...i, quantity: i.quantity + 1} : i));
+                                    } else {
+                                      notify(`Stock máximo: ${currentProductStock} unidades`);
+                                    }
+                                  }}
+                                  className="text-gray-400 hover:text-white px-1 font-bold"
+                                >+</button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
 
@@ -893,121 +1102,352 @@
 
           {/* Detail Modal for Selected Product */}
           {}
-          {selectedProduct && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-              <div className="bg-ender-card w-full max-w-2xl rounded-3xl border border-ender-border overflow-hidden shadow-2xl relative max-h-[90vh] flex flex-col md:flex-row">
-                
-                <button
-                  onClick={() => setSelectedProduct(null)}
-                  className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-ender-bg text-gray-400 hover:text-white flex items-center justify-center border border-ender-border"
-                >
-                  <i className="fa-solid fa-xmark"></i>
-                </button>
+          {selectedProduct && (() => {
+            const currentStock = stocks[selectedProduct.id] ?? selectedProduct.stock;
+            const isOutOfStock = currentStock <= 0;
 
-                {/* Modal Product Image */}
-                <div className="md:w-1/2 bg-ender-bg p-4 flex items-center justify-center">
-                  <img
-                    src={selectedProduct.image}
-                    alt={selectedProduct.name}
-                    className="w-full h-56 md:h-80 object-cover rounded-2xl"
-                  />
-                </div>
+            return (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+                <div className="bg-ender-card w-full max-w-2xl rounded-3xl border border-ender-border overflow-hidden shadow-2xl relative max-h-[90vh] flex flex-col md:flex-row">
+                  
+                  <button
+                    onClick={() => setSelectedProduct(null)}
+                    className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-ender-bg text-gray-400 hover:text-white flex items-center justify-center border border-ender-border"
+                  >
+                    <i className="fa-solid fa-xmark"></i>
+                  </button>
 
-                {/* Modal Details */}
-                <div className="md:w-1/2 p-4 sm:p-5 flex flex-col justify-between overflow-y-auto space-y-3">
-                  <div>
-                    <span className="text-[10px] font-bold text-ender-purple uppercase tracking-wider">{selectedProduct.category}</span>
-                    <h3 className="text-base sm:text-lg font-bold text-white leading-tight mt-0.5">{selectedProduct.name}</h3>
-                    
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xl font-extrabold text-ender-yellow">S/. {selectedProduct.price.toFixed(2)}</span>
-                      {selectedProduct.originalPrice && (
-                        <span className="text-xs text-gray-500 line-through">S/. {selectedProduct.originalPrice.toFixed(2)}</span>
+                  {/* Modal Product Image */}
+                  <div className="md:w-1/2 bg-ender-bg p-4 flex items-center justify-center relative">
+                    <img
+                      src={selectedProduct.image}
+                      alt={selectedProduct.name}
+                      onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }}
+                      className="w-full h-56 md:h-80 object-cover rounded-2xl"
+                    />
+                    <div className="absolute bottom-6 left-6">
+                      {isOutOfStock ? (
+                        <span className="bg-rose-950 text-rose-300 border border-rose-500 text-[10px] font-bold px-2.5 py-1 rounded-lg">
+                          Agotado
+                        </span>
+                      ) : (
+                        <span className="bg-emerald-950/90 text-emerald-300 border border-emerald-500/50 text-[10px] font-bold px-2.5 py-1 rounded-lg">
+                          Disponibles: {currentStock} unidades
+                        </span>
                       )}
                     </div>
-
-                    <p className="text-xs text-ender-subtext mt-2 leading-relaxed">
-                      {selectedProduct.description}
-                    </p>
-
-                    {/* Options / Sizes Selector */}
-                    {selectedProduct.sizes && (
-                      <div className="mt-3">
-                        <label className="block text-[10px] font-bold text-gray-300 uppercase mb-1.5">{selectedProduct.optionsLabel || 'Opciones'}:</label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {selectedProduct.sizes.map((sz) => (
-                            <button
-                              key={sz}
-                              onClick={() => setProductOption(sz)}
-                              className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition ${
-                                productOption === sz
-                                  ? "bg-ender-accent text-white border-ender-accent shadow-glow-pink"
-                                  : "bg-ender-bg text-ender-subtext border-ender-border"
-                              }`}
-                            >
-                              {sz}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Style / Color Selector */}
-                    {selectedProduct.colors && (
-                      <div className="mt-3">
-                        <label className="block text-[10px] font-bold text-gray-300 uppercase mb-1.5">Estilo / Personaje:</label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {selectedProduct.colors.map((c) => (
-                            <button
-                              key={c}
-                              onClick={() => setProductColor(c)}
-                              className={`px-2.5 py-1 rounded-xl text-xs font-semibold border transition ${
-                                productColor === c
-                                  ? "bg-ender-purple text-white border-ender-purple"
-                                  : "bg-ender-bg text-ender-subtext border-ender-border"
-                              }`}
-                            >
-                              {c}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Quantity */}
-                    <div className="mt-3 flex items-center gap-2">
-                      <label className="text-[10px] font-bold text-gray-300 uppercase">Cantidad:</label>
-                      <div className="flex items-center bg-ender-bg rounded-xl border border-ender-border px-2 py-0.5">
-                        <button onClick={() => setProductQty(Math.max(1, productQty - 1))} className="text-gray-400 px-1 font-bold">-</button>
-                        <span className="px-2 text-xs font-bold text-white">{productQty}</span>
-                        <button onClick={() => setProductQty(productQty + 1)} className="text-gray-400 px-1 font-bold">+</button>
-                      </div>
-                    </div>
                   </div>
 
-                  <div className="space-y-2 pt-3 border-t border-ender-border">
-                    <button
-                      onClick={() => {
-                        addToCart(selectedProduct, productOption, productColor, productQty);
-                        setSelectedProduct(null);
-                      }}
-                      className="w-full py-2.5 rounded-xl bg-ender-bg hover:bg-ender-accent hover:text-white text-ender-accent border border-ender-accent/50 font-bold text-xs uppercase tracking-wider transition"
-                    >
-                      Añadir al Carrito
-                    </button>
+                  {/* Modal Details */}
+                  <div className="md:w-1/2 p-4 sm:p-5 flex flex-col justify-between overflow-y-auto space-y-3">
+                    <div>
+                      <span className="text-[10px] font-bold text-ender-purple uppercase tracking-wider">{selectedProduct.category}</span>
+                      <h3 className="text-base sm:text-lg font-bold text-white leading-tight mt-0.5">{selectedProduct.name}</h3>
+                      
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xl font-extrabold text-ender-yellow">S/. {selectedProduct.price.toFixed(2)}</span>
+                        {selectedProduct.originalPrice && (
+                          <span className="text-xs text-gray-500 line-through">S/. {selectedProduct.originalPrice.toFixed(2)}</span>
+                        )}
+                      </div>
 
-                    <a
-                      href={getDirectItemWpUrl(selectedProduct, productOption, productColor, productQty)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-2 transition"
-                    >
-                      <i className="fa-brands fa-whatsapp text-base"></i>
-                      <span>Pedir por WhatsApp / Yape</span>
-                    </a>
+                      <p className="text-xs text-ender-subtext mt-2 leading-relaxed">
+                        {selectedProduct.description}
+                      </p>
+
+                      {/* Options / Sizes Selector */}
+                      {selectedProduct.sizes && (
+                        <div className="mt-3">
+                          <label className="block text-[10px] font-bold text-gray-300 uppercase mb-1.5">{selectedProduct.optionsLabel || 'Opciones'}:</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {selectedProduct.sizes.map((sz) => (
+                              <button
+                                key={sz}
+                                onClick={() => setProductOption(sz)}
+                                className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition ${
+                                  productOption === sz
+                                    ? "bg-ender-accent text-white border-ender-accent shadow-glow-pink"
+                                    : "bg-ender-bg text-ender-subtext border-ender-border"
+                                }`}
+                              >
+                                {sz}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Style / Color Selector */}
+                      {selectedProduct.colors && (
+                        <div className="mt-3">
+                          <label className="block text-[10px] font-bold text-gray-300 uppercase mb-1.5">Estilo / Personaje:</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {selectedProduct.colors.map((c) => (
+                              <button
+                                key={c}
+                                onClick={() => setProductColor(c)}
+                                className={`px-2.5 py-1 rounded-xl text-xs font-semibold border transition ${
+                                  productColor === c
+                                    ? "bg-ender-purple text-white border-ender-purple"
+                                    : "bg-ender-bg text-ender-subtext border-ender-border"
+                                }`}
+                              >
+                                {c}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Quantity */}
+                      <div className="mt-3 flex items-center gap-2">
+                        <label className="text-[10px] font-bold text-gray-300 uppercase">Cantidad:</label>
+                        <div className="flex items-center bg-ender-bg rounded-xl border border-ender-border px-2 py-0.5">
+                          <button 
+                            onClick={() => setProductQty(Math.max(1, productQty - 1))} 
+                            className="text-gray-400 px-1 font-bold"
+                          >-</button>
+                          <span className="px-2 text-xs font-bold text-white">{productQty}</span>
+                          <button 
+                            onClick={() => {
+                              if (productQty < currentStock) {
+                                setProductQty(productQty + 1);
+                              } else {
+                                notify(`Stock máximo: ${currentStock}`);
+                              }
+                            }} 
+                            className="text-gray-400 px-1 font-bold"
+                          >+</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 pt-3 border-t border-ender-border">
+                      <button
+                        onClick={() => {
+                          addToCart(selectedProduct, productOption, productColor, productQty);
+                          setSelectedProduct(null);
+                        }}
+                        disabled={isOutOfStock}
+                        className={`w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition ${
+                          isOutOfStock 
+                            ? 'bg-ender-border text-gray-500 cursor-not-allowed border border-gray-700' 
+                            : 'bg-ender-bg hover:bg-ender-accent hover:text-white text-ender-accent border border-ender-accent/50'
+                        }`}
+                      >
+                        {isOutOfStock ? 'Producto Agotado' : 'Añadir al Carrito'}
+                      </button>
+
+                      <a
+                        href={getDirectItemWpUrl(selectedProduct, productOption, productColor, productQty)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-2 transition"
+                      >
+                        <i className="fa-brands fa-whatsapp text-base"></i>
+                        <span>Pedir por WhatsApp / Yape</span>
+                      </a>
+                    </div>
+
                   </div>
 
                 </div>
+              </div>
+            );
+          })()}
+
+          {/* ADMIN & INVENTORY MODAL (Firebase Connected) */}
+          {}
+          {isAdminOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+              <div className="bg-ender-card w-full max-w-3xl rounded-3xl border border-purple-500/40 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                
+                {/* Admin Modal Header */}
+                <div className="p-4 bg-purple-950/40 border-b border-purple-500/30 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-ender-purple to-ender-cyan flex items-center justify-center text-white text-sm shadow">
+                      <i className="fa-solid fa-boxes-stacked"></i>
+                    </div>
+                    <div>
+                      <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                        Gestor de Inventario & Stock
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold">
+                          <i className="fa-solid fa-cloud mr-1"></i> Firebase Sync
+                        </span>
+                      </h3>
+                      <p className="text-[11px] text-ender-subtext">Actualiza las existencias para que se muestren en la web</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsAdminOpen(false)}
+                    className="w-8 h-8 rounded-lg bg-ender-bg text-gray-400 hover:text-white flex items-center justify-center border border-ender-border"
+                  >
+                    <i className="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+
+                {/* Authentication Gate */}
+                {!isAdminAuth ? (
+                  <div className="p-6 sm:p-8 flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-14 h-14 rounded-2xl bg-ender-bg border border-ender-border flex items-center justify-center text-ender-yellow text-2xl shadow-inner">
+                      <i className="fa-solid fa-lock"></i>
+                    </div>
+                    <div>
+                      <h4 className="text-base font-bold text-white">Acceso de Administrador</h4>
+                      <p className="text-xs text-ender-subtext mt-1 max-w-sm">
+                        Ingresa la clave de acceso de Ender Rivera para modificar el stock en tiempo real.
+                      </p>
+                    </div>
+                    <form onSubmit={handleAdminLogin} className="w-full max-w-xs space-y-3">
+                      <input
+                        type="password"
+                        placeholder="PIN o Clave (Ej: 1234)"
+                        value={adminPass}
+                        onChange={(e) => setAdminPass(e.target.value)}
+                        autoFocus
+                        className="w-full bg-ender-bg text-sm text-center text-white placeholder-gray-500 rounded-xl px-4 py-2.5 border border-ender-border focus:outline-none focus:border-ender-accent tracking-widest"
+                      />
+                      <button
+                        type="submit"
+                        className="w-full py-2.5 rounded-xl badge-pop text-white font-bold text-xs uppercase tracking-wider shadow-glow-pink"
+                      >
+                        Ingresar al Gestor
+                      </button>
+                      <p className="text-[10px] text-gray-500">Clave de demostración: <strong className="text-ender-yellow">1234</strong></p>
+                    </form>
+                  </div>
+                ) : (
+                  /* Admin Inventory Editor */
+                  <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+                    <div className="bg-ender-bg p-3.5 rounded-2xl border border-ender-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div>
+                        <span className="font-bold text-white">📦 Catálogo de Productos ({PRODUCTS.length})</span>
+                        <p className="text-[11px] text-ender-subtext">Ajusta con los botones rápidos o escribe la cantidad exacta.</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            // Reset to defaults
+                            const def = {};
+                            PRODUCTS.forEach(p => { def[p.id] = p.stock; });
+                            setTempStocks(def);
+                            notify("Restaurado a valores base");
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-ender-card hover:bg-gray-800 text-gray-400 border border-ender-border text-[11px]"
+                        >
+                          Restablecer
+                        </button>
+                        <button
+                          onClick={() => setIsAdminAuth(false)}
+                          className="px-3 py-1.5 rounded-lg bg-rose-950/40 text-rose-300 border border-rose-800/40 text-[11px]"
+                        >
+                          Cerrar Sesión
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Stock items list */}
+                    <div className="space-y-2.5">
+                      {PRODUCTS.map((prod) => {
+                        const count = tempStocks[prod.id] ?? 0;
+                        return (
+                          <div 
+                            key={prod.id} 
+                            className="bg-ender-card p-3 rounded-2xl border border-ender-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-ender-purple/50 transition"
+                          >
+                            <div className="flex items-center gap-3">
+                              <img 
+                                src={prod.image} 
+                                alt={prod.name}
+                                onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }}
+                                className="w-12 h-12 rounded-xl object-cover bg-ender-bg flex-shrink-0" 
+                              />
+                              <div className="min-w-0">
+                                <h5 className="text-xs font-bold text-white truncate max-w-xs">{prod.name}</h5>
+                                <div className="flex items-center gap-2 text-[10px] mt-0.5">
+                                  <span className="text-ender-purple font-semibold">{prod.category}</span>
+                                  <span className="text-gray-500">•</span>
+                                  <span className="text-ender-yellow font-bold">S/. {prod.price.toFixed(2)}</span>
+                                  <span className="text-gray-500">•</span>
+                                  <span className={`font-extrabold ${count === 0 ? 'text-rose-400' : count <= 5 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                    {count === 0 ? 'Agotado' : `${count} unid.`}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Controls */}
+                            <div className="flex items-center gap-1.5 self-end sm:self-center">
+                              <button
+                                onClick={() => adjustTempStock(prod.id, -5)}
+                                className="w-7 h-7 rounded-lg bg-ender-bg hover:bg-gray-800 text-gray-300 border border-ender-border text-xs font-bold"
+                                title="Restar 5"
+                              >-5</button>
+                              <button
+                                onClick={() => adjustTempStock(prod.id, -1)}
+                                className="w-7 h-7 rounded-lg bg-ender-bg hover:bg-gray-800 text-gray-300 border border-ender-border text-xs font-bold"
+                                title="Restar 1"
+                              >-</button>
+                              
+                              <input
+                                type="number"
+                                min="0"
+                                value={count}
+                                onChange={(e) => setDirectTempStock(prod.id, e.target.value)}
+                                className="w-14 bg-ender-bg text-center text-xs font-black text-white rounded-lg py-1 border border-ender-border focus:outline-none focus:border-ender-accent"
+                              />
+
+                              <button
+                                onClick={() => adjustTempStock(prod.id, 1)}
+                                className="w-7 h-7 rounded-lg bg-ender-bg hover:bg-gray-800 text-emerald-400 border border-ender-border text-xs font-bold"
+                                title="Sumar 1"
+                              >+</button>
+                              <button
+                                onClick={() => adjustTempStock(prod.id, 5)}
+                                className="w-7 h-7 rounded-lg bg-ender-bg hover:bg-gray-800 text-emerald-400 border border-ender-border text-xs font-bold"
+                                title="Sumar 5"
+                              >+5</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Admin Modal Footer */}
+                {isAdminAuth && (
+                  <div className="p-4 bg-ender-bg border-t border-ender-border flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <span className="text-[11px] text-ender-subtext text-center sm:text-left">
+                      💡 Los cambios se sincronizan en la nube automáticamente para todos tus clientes.
+                    </span>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <button
+                        onClick={() => setIsAdminOpen(false)}
+                        className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-ender-card text-gray-300 border border-ender-border text-xs font-bold hover:text-white"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={handleSaveStockToFirebase}
+                        disabled={isSavingStock}
+                        className="flex-1 sm:flex-none px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-1.5"
+                      >
+                        {isSavingStock ? (
+                          <>
+                            <i className="fa-solid fa-spinner fa-spin"></i>
+                            <span>Guardando...</span>
+                          </>
+                        ) : (
+                          <>
+                            <i className="fa-solid fa-floppy-disk"></i>
+                            <span>Guardar Stock</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
               </div>
             </div>
@@ -1086,6 +1526,7 @@
           </div>
 
           {/* Mobile Dock Navigation Bar */}
+          {}
           <div className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-ender-bg/95 backdrop-blur-lg border-t border-ender-border px-4 py-2 flex items-center justify-around text-xs">
             <button
               onClick={() => { setSelectedCategory("Todos"); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
@@ -1102,6 +1543,14 @@
               <i className="fa-solid fa-layer-group text-sm"></i>
               <span className="text-[10px]">Catálogo</span>
             </a>
+
+            <button
+              onClick={() => setIsAdminOpen(true)}
+              className="flex flex-col items-center gap-0.5 text-purple-400"
+            >
+              <i className="fa-solid fa-boxes-stacked text-sm"></i>
+              <span className="text-[10px]">Stock</span>
+            </button>
 
             <button
               onClick={() => setIsCartOpen(true)}
