@@ -88,7 +88,6 @@
       color: #f0f0f5;
       /* Previene el desbordamiento horizontal global */
       overflow-x: hidden;
-      overscroll-behavior-y: none; /* Sensación de App Nativa sin rebotes */
       width: 100%;
     }
     h1, h2, h3, h4, .font-display {
@@ -481,7 +480,8 @@
       };
 
       return (
-        <div className="min-h-screen flex flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0 relative bg-ender-bg text-gray-100 w-full overflow-hidden">
+        // OVERFLOW-X-HIDDEN solucion el scroll de PC 
+        <div className="min-h-screen flex flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0 relative bg-ender-bg text-gray-100 w-full overflow-x-hidden">
           
           {/* Notification Toast */}
           {toast && (
@@ -731,7 +731,7 @@
             </div>
           </section>
 
-          {}
+          {/* Main Products Catalog */}
           <main id="catalogo" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-1 w-full relative">
             
             {/* Header section & Mobile Filter Pills */}
@@ -884,7 +884,6 @@
             </div>
           </main>
 
-          {}
           {/* Artist Links Banner */}
           <section className="bg-ender-card border-y border-ender-border py-8 sm:py-12 my-6 w-full">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -987,12 +986,17 @@
             </div>
           </footer>
 
-          {}
           {/* Shopping Cart Drawer */}
           {isCartOpen && (
-            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm animate-fadeIn">
+            <div 
+              className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm animate-fadeIn"
+              onClick={() => setIsCartOpen(false)} // Cierra al tocar el fondo oscuro
+            >
               <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-                <div className="w-screen max-w-md bg-ender-bg border-l border-ender-border flex flex-col justify-between shadow-2xl pb-safe">
+                <div 
+                  className="w-screen max-w-md bg-ender-bg border-l border-ender-border flex flex-col justify-between shadow-2xl pb-safe"
+                  onClick={(e) => e.stopPropagation()} // Previene cerrar si tocas dentro del panel
+                >
                   
                   {/* Cart Header */}
                   <div className="p-4 border-b border-ender-border flex items-center justify-between bg-ender-card">
@@ -1100,14 +1104,21 @@
             const isOutOfStock = currentStock <= 0;
 
             return (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-                <div className="bg-ender-card w-full max-w-2xl rounded-3xl border border-ender-border overflow-hidden shadow-2xl relative max-h-[90vh] flex flex-col md:flex-row landscape:flex-row">
+              <div 
+                className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn"
+                onClick={() => setSelectedProduct(null)} // Cierra al tocar el fondo oscuro
+              >
+                <div 
+                  className="bg-ender-card w-full max-w-2xl rounded-3xl border border-ender-border overflow-hidden shadow-2xl relative max-h-[90vh] flex flex-col md:flex-row landscape:flex-row"
+                  onClick={(e) => e.stopPropagation()} // Previene que se cierre al hacer clic adentro del modal
+                >
                   
+                  {/* Enhanced Close Button */}
                   <button
                     onClick={() => setSelectedProduct(null)}
-                    className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-ender-bg text-gray-400 hover:text-white flex items-center justify-center border border-ender-border active:scale-95 shadow-md"
+                    className="absolute top-3 right-3 z-50 w-9 h-9 rounded-full bg-black/60 text-white hover:bg-ender-accent flex items-center justify-center border border-white/20 active:scale-95 shadow-lg backdrop-blur-md transition-all"
                   >
-                    <i className="fa-solid fa-xmark"></i>
+                    <i className="fa-solid fa-xmark text-lg"></i>
                   </button>
 
                   {/* Modal Product Image */}
@@ -1135,7 +1146,7 @@
                   <div className="md:w-1/2 landscape:w-1/2 p-4 sm:p-5 flex flex-col justify-between overflow-y-auto space-y-3 z-10 bg-ender-card relative">
                     <div>
                       <span className="text-[10px] font-bold text-ender-purple uppercase tracking-wider">{selectedProduct.category}</span>
-                      <h3 className="text-base sm:text-lg font-bold text-white leading-tight mt-0.5">{selectedProduct.name}</h3>
+                      <h3 className="text-base sm:text-lg font-bold text-white leading-tight mt-0.5 pr-8">{selectedProduct.name}</h3>
                       
                       <div className="flex items-center gap-2 mt-2">
                         <span className="text-xl font-extrabold text-ender-yellow">S/. {selectedProduct.price.toFixed(2)}</span>
@@ -1251,8 +1262,14 @@
 
           {/* ADMIN & INVENTORY MODAL (Firebase Connected) */}
           {isAdminOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-              <div className="bg-ender-card w-full max-w-3xl rounded-3xl border border-purple-500/40 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] pb-safe">
+            <div 
+              className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn"
+              onClick={() => setIsAdminOpen(false)} // Cierra al tocar el fondo
+            >
+              <div 
+                className="bg-ender-card w-full max-w-3xl rounded-3xl border border-purple-500/40 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] pb-safe"
+                onClick={(e) => e.stopPropagation()} // Previene cierre interior
+              >
                 
                 {/* Admin Modal Header */}
                 <div className="p-4 bg-purple-950/40 border-b border-purple-500/30 flex items-center justify-between">
